@@ -3,8 +3,8 @@ Developed by: new qTranslate community, from qTranslate-X by John Clause and qTr
 Contributors: herrvigg, johnclause, chineseleper, Vavooon, grafcom  
 Tags: multilingual, language, admin, tinymce, bilingual, widget, switcher, i18n, l10n, multilanguage, translation  
 Requires at least: 5.0  
-Tested up to: 6.8.3  
-Requires PHP: 7.4  
+Tested up to: 6.9.4  
+Requires PHP: 8.4  
 Stable tag: N/A  
 License: GPLv2 or later  
 License URI: https://www.gnu.org/licenses/gpl-2.0.html  
@@ -14,6 +14,15 @@ Adds user-friendly multilingual content support, stored in single post.
 ## Description
 
 The qTranslate-XT plugin is an *eXTended* version of qTranslate-X that we are reviving with a new community, since the [original plugin](https://wordpress.org/plugins/qtranslate-x/) is abandoned by its author. Our first goal is to maintain the essential features of this plugin with the last Wordpress and PHP updates. The migration to Gutenberg will be a critical milestone for the survival of this plugin. We are currently building a [new organization](https://github.com/qtranslate) to give qTranslate a new life. Let's try together, anyone is welcome to participate!
+
+### **Export Features**
+
+This version includes specialized export functionality for migrating to Polylang:
+
+- **Polylang Export**: Transform qTranslate-XT multilingual content to Polylang-compatible format
+- **Hierarchy Preservation**: Maintains page structure and parent-child relationships during migration
+- **Automated Reconstruction**: Built-in tools to restore page hierarchy after import
+- **Migration Scripts**: Dedicated admin interface for seamless migration process
 
 GitHub repository of the new repo: [https://github.com/qtranslate/qtranslate-xt.git](https://github.com/qtranslate/qtranslate-xt).
 
@@ -32,6 +41,44 @@ If you didn't already have qTranslate-X, proceed with the initial setup of qTran
 2. Add the "qTranslate Language Chooser" widget or "Language Switcher" menu item to let your visitors switch the language.
 
 Check the FAQ for further instructions.
+
+## **Polylang Migration Guide**
+
+This version includes advanced migration tools for moving from qTranslate-XT to Polylang:
+
+### **Migration Process**
+
+1. **Export Content**: Use `Ferramentas > Exportar Polylang` to process your WordPress export
+2. **Import to New Site**: Import the processed XML in the new Polylang-enabled site
+3. **Rebuild Hierarchy**: Use `Ferramentas > Reconstruir Hierarquia` to restore page structure
+4. **Connect Translations**: Use the provided script to link translated content
+
+### **Key Features**
+
+- **✅ Hierarchy Preservation**: Page parent-child relationships maintained
+- **✅ Menu Order**: Original page ordering preserved
+- **✅ Metadata Handling**: Automatic cleanup of migration data
+- **✅ Error Handling**: Comprehensive validation and feedback
+- **✅ Admin Interface**: User-friendly WordPress admin integration
+
+### **Access Points**
+
+- **Export Tool**: `wp-admin/tools.php?page=qtranslate-xt-polylang`
+- **Hierarchy Rebuild**: `wp-admin/tools.php?page=qtranslate-xt-rebuild`
+- **Language Diagnostics**: `wp-admin/tools.php?page=qtranslate-xt-diagnose`
+- **Polylang Guide**: `wp-admin/tools.php?page=qtranslate-xt-polylang-guide`
+- **Polylang Connector**: `wp-admin/tools.php?page=qtranslate-xt-connector`
+
+### **Complete Migration Workflow**
+
+1. **📤 Export**: Use WordPress Export on original site → Download XML
+2. **🔧 Process**: Upload XML to new site with qTranslate-XT Export → Download Polylang XML
+3. **📥 Import**: Use WordPress Importer on new site
+4. **🔨 Rebuild**: Restore page hierarchy automatically
+5. **🔗 Connect**: Link translations via Polylang connector
+6. **✅ Verify**: Test multilingual functionality
+
+Each step has a dedicated admin interface with detailed instructions and error handling.
 
 ## Frequently Asked Questions
 
@@ -60,6 +107,17 @@ Check our [Wiki pages](https://github.com/qtranslate/qtranslate-xt/wiki):
 * It is important to read [migration instructions](https://github.com/qtranslate/qtranslate-xt/wiki/Migration-Guide "Migration Guide"), if you previously used other multilingual plugin.
 * Read [Integration Guide](https://github.com/qtranslate/qtranslate-xt/wiki/Integration-Guide "Integration Guide") when you need to make theme or other plugin custom fields to be multilingual.
 * For more detailed questions see our [technical FAQ](https://github.com/qtranslate/qtranslate-xt/wiki/FAQ).
+
+### Troubleshooting "Languages are not set"
+If you see "Languages are not set" in the page listing:
+
+1. **Use Diagnostic Tool**: Access `wp-admin/tools.php?page=qtranslate-xt-diagnose`
+2. **Configure Languages**: Go to `wp-admin/options-general.php?page=qtranslate-xt`
+3. **Add Languages**: Enable at least one language (e.g., Portuguese, English)
+4. **Set Default**: Choose a default language
+5. **Format Content**: Use `[:pt]Text[:en]Text` format in posts
+
+The diagnostic tool will identify configuration issues and provide specific solutions.
 
 ### How to update qTranslate-XT with the last release?
 Since the -XT version is not available at wordpress.org, we recommend you to install [GitHub Updater](https://github.com/afragen/github-updater). This is is an awesome tool to update plugins from a git repo (with many other features). It checks regularly the last release available in github (from the `git tags`) and compares it to your current version (defined in the header of `qtranslate.php`). If a new release is available an update link will appear as for a regular plugin from Wordpress. The check is performed even if the plugin is deactivated.
