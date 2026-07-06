@@ -1,11 +1,16 @@
 <?php
-
 /**
  * Flags used in translate_text.
  */
-const QTX_TRANSLATOR_SHOW_DEFAULT   = 1;
-const QTX_TRANSLATOR_SHOW_AVAILABLE = 2;
-const QTX_TRANSLATOR_SHOW_EMPTY     = 4;
+if ( ! defined( 'QTX_TRANSLATOR_SHOW_DEFAULT' ) ) {
+	define( 'QTX_TRANSLATOR_SHOW_DEFAULT', 1 );
+}
+if ( ! defined( 'QTX_TRANSLATOR_SHOW_AVAILABLE' ) ) {
+	define( 'QTX_TRANSLATOR_SHOW_AVAILABLE', 2 );
+}
+if ( ! defined( 'QTX_TRANSLATOR_SHOW_EMPTY' ) ) {
+	define( 'QTX_TRANSLATOR_SHOW_EMPTY', 4 );
+}
 
 /**
  * Interface QTX_Translator_Interface
@@ -41,53 +46,51 @@ const QTX_TRANSLATOR_SHOW_EMPTY     = 4;
  * @since 3.4
  */
 interface QTX_Translator_Interface {
-    /**
-     * Get QTX_Translator_Interface global object.
-     */
-    public static function get_translator();
+	/**
+	 * Get QTX_Translator_Interface global object.
+	 */
+	public static function get_translator();
 
-    /**
-     * @return string two-letter code of active language.
-     * @since 3.4.6.9
-     */
-    public function get_language(): string;
+	/**
+	 * @return string two-letter code of active language.
+	 * @since 3.4.6.9
+	 */
+	public function get_language(): string;
 
-    /**
-     * @param string $lang two-letter code of language to be set as active. Further translations will be to this language unless desired languge is specified.
-     *
-     * @return string two-letter code of new active language.
-     * @since 3.4.6.9
-     *
-     */
-    public function set_language( string $lang ): string;
+	/**
+	 * @param string $lang two-letter code of language to be set as active. Further translations will be to this language unless desired languge is specified.
+	 *
+	 * @return string two-letter code of new active language.
+	 * @since 3.4.6.9
+	 */
+	public function set_language( string $lang ): string;
 
-    /**
-     * Get translated value from a multilingual string.
-     *
-     * @param mixed $text - a string, an array or an object possibly containing multilingual values.
-     * @param string|null $lang (optional) - a two-letter language code of the language to be extracted from $text. If omitted or null, then the currently active language is assumed.
-     * @param int $flags (optional) - what to return if text for language $lang is not available. Possible choices are:
-     *     QTX_TRANSLATOR_SHOW_DEFAULT - show the value for default language
-     *     QTX_TRANSLATOR_SHOW_AVAILABLE - return a list of available languages with language-encoded links to the current page.
-     *     QTX_TRANSLATOR_SHOW_EMPTY - return empty string.
-     */
-    public function translate_text( $text, ?string $lang = null, int $flags = 0 ): string;
+	/**
+	 * Get translated value from a multilingual string.
+	 *
+	 * @param mixed       $text - a string, an array or an object possibly containing multilingual values.
+	 * @param string|null $lang (optional) - a two-letter language code of the language to be extracted from $text. If omitted or null, then the currently active language is assumed.
+	 * @param int         $flags (optional) - what to return if text for language $lang is not available. Possible choices are:
+	 *             QTX_TRANSLATOR_SHOW_DEFAULT - show the value for default language
+	 *             QTX_TRANSLATOR_SHOW_AVAILABLE - return a list of available languages with language-encoded links to the current page.
+	 *             QTX_TRANSLATOR_SHOW_EMPTY - return empty string.
+	 */
+	public function translate_text( $text, ?string $lang = null, int $flags = 0 ): string;
 
-    /**
-     * Get translated value for a term name.
-     *
-     * @param mixed $term The term name to be translated. It may be an array of terms.
-     * @param string|null $lang (optional) A two-letter language code of the language to translate $term to. If omitted or null, then the currently active language is assumed.
-     * @param string|null $taxonomy (optional) Taxonomy name that $term is part of. Currently unused, since all term names assumed to be unique across all taxonomies.
-     */
-    public function translate_term( $term, ?string $lang = null, ?string $taxonomy = null ): string;
+	/**
+	 * Get translated value for a term name.
+	 *
+	 * @param mixed       $term The term name to be translated. It may be an array of terms.
+	 * @param string|null $lang (optional) A two-letter language code of the language to translate $term to. If omitted or null, then the currently active language is assumed.
+	 * @param string|null $taxonomy (optional) Taxonomy name that $term is part of. Currently unused, since all term names assumed to be unique across all taxonomies.
+	 */
+	public function translate_term( $term, ?string $lang = null, ?string $taxonomy = null ): string;
 
-    /**
-     * Get language-encoded value for a URL.
-     *
-     * @param mixed $url The URL to be encoded. It may be an array of URLs.
-     * @param string|null $lang (optional) A two-letter language code of the language to encode $url with. If omitted or null, then the currently active language is assumed.
-     */
-    public function translate_url( $url, ?string $lang = null ): string;
-
+	/**
+	 * Get language-encoded value for a URL.
+	 *
+	 * @param mixed       $url The URL to be encoded. It may be an array of URLs.
+	 * @param string|null $lang (optional) A two-letter language code of the language to encode $url with. If omitted or null, then the currently active language is assumed.
+	 */
+	public function translate_url( $url, ?string $lang = null ): string;
 }
