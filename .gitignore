@@ -1,2 +1,10 @@
 .idea/
 node_modules/
+build/
+
+# Artefatos de execução (não versionar)
+phpstan_errors*.json
+phpstan_current_errors.json
+phpstan_results.json
+.phpunit.result.cache
+.playwright-cli/
