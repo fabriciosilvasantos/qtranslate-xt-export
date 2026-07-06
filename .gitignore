@@ -13,3 +13,8 @@ phpstan_results.json
 
 # Scratch/exports de desenvolvimento do migrator
 qtx-polylang-migrator/tmp/
+
+# Config local do Claude Code e ferramentas de agentes
+.claude/settings.local.json
+.claude/worktrees/
+.agent/
