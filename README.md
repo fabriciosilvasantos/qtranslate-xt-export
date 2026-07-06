@@ -44,41 +44,57 @@ Check the FAQ for further instructions.
 
 ## **Polylang Migration Guide**
 
-This version includes advanced migration tools for moving from qTranslate-XT to Polylang:
+This repository now includes a standalone migration plugin for moving from qTranslate-XT to Polylang:
+
+### **Implementação Técnica**
+
+Para mantenedores e desenvolvedores, a implementação da nova versão do migrador standalone está documentada em:
+
+- [docs/IMPLEMENTACAO-QTX-POLYLANG-MIGRATOR.md](docs/IMPLEMENTACAO-QTX-POLYLANG-MIGRATOR.md)
+
+Resumo do estado atual:
+
+- plugin standalone criado para o fluxo de migração qTranslate-XT → Polylang
+- o fluxo operacional do migrador já está independente do qTranslate-XT
+- o motor da migração foi movido e modularizado dentro do plugin novo
+- a validação automatizada foi concluída com `test`, `integration`, `stan` e `phpcs`
+
+Empacotamento do plugin standalone:
+
+- gerar pacote distribuível: `./run-tests.sh package-migrator`
+- saída gerada em `build/qtx-polylang-migrator-<versão>.zip`
 
 ### **Migration Process**
 
-1. **Export Content**: Use `Ferramentas > Exportar Polylang` to process your WordPress export
-2. **Import to New Site**: Import the processed XML in the new Polylang-enabled site
-3. **Rebuild Hierarchy**: Use `Ferramentas > Reconstruir Hierarquia` to restore page structure
-4. **Connect Translations**: Use the provided script to link translated content
+1. **Export Content**: Use the WordPress exporter on the original qTranslate-XT site
+2. **Install the Migrator**: Activate `qTranslate to Polylang Migrator` on the destination site with Polylang
+3. **Process and Import XML**: Open `Ferramentas > qTranslate Migrator`
+4. **Rebuild and Connect**: Let the migrator reconstruct hierarchy, provision languages and connect translations
 
 ### **Key Features**
 
+- **Standalone Plugin**: Migration runs independently from qTranslate-XT
 - **✅ Hierarchy Preservation**: Page parent-child relationships maintained
 - **✅ Menu Order**: Original page ordering preserved
-- **✅ Metadata Handling**: Automatic cleanup of migration data
+- **✅ Language Provisioning**: Missing Polylang languages are created automatically when recognized
+- **✅ Duplicate Repair**: Safe orphan duplicates are downgraded to `draft`
 - **✅ Error Handling**: Comprehensive validation and feedback
 - **✅ Admin Interface**: User-friendly WordPress admin integration
 
 ### **Access Points**
 
-- **Export Tool**: `wp-admin/tools.php?page=qtranslate-xt-polylang`
-- **Hierarchy Rebuild**: `wp-admin/tools.php?page=qtranslate-xt-rebuild`
-- **Language Diagnostics**: `wp-admin/tools.php?page=qtranslate-xt-diagnose`
-- **Polylang Guide**: `wp-admin/tools.php?page=qtranslate-xt-polylang-guide`
-- **Polylang Connector**: `wp-admin/tools.php?page=qtranslate-xt-connector`
+- **Standalone Migrator**: `wp-admin/tools.php?page=qtx-polylang-migrator`
 
 ### **Complete Migration Workflow**
 
 1. **📤 Export**: Use WordPress Export on original site → Download XML
-2. **🔧 Process**: Upload XML to new site with qTranslate-XT Export → Download Polylang XML
-3. **📥 Import**: Use WordPress Importer on new site
+2. **🔧 Activate**: Enable Polylang and `qTranslate to Polylang Migrator` on the new site
+3. **📥 Import**: Upload the original XML in `Ferramentas > qTranslate Migrator`
 4. **🔨 Rebuild**: Restore page hierarchy automatically
-5. **🔗 Connect**: Link translations via Polylang connector
+5. **🔗 Connect**: Assign languages and link translations in the Polylang format
 6. **✅ Verify**: Test multilingual functionality
 
-Each step has a dedicated admin interface with detailed instructions and error handling.
+The migrator now runs only through the standalone plugin entry point and no longer depends on qTranslate-XT admin wrappers or bridge files.
 
 ## Frequently Asked Questions
 

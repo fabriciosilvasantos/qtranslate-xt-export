@@ -8,3 +8,6 @@ phpstan_current_errors.json
 phpstan_results.json
 .phpunit.result.cache
 .playwright-cli/
+
+# Scratch/exports de desenvolvimento do migrator
+qtx-polylang-migrator/tmp/
