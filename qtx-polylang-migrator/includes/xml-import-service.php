@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param bool   $force_import Whether to ignore pre-existing posts.
  * @return array<string, mixed>
  */
-function qtxpm_direct_xml_import( $xml_file, $force_import = false ) {
+function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false ): array {
 	global $wpdb;
 
 	$result = array(
@@ -27,7 +27,7 @@ function qtxpm_direct_xml_import( $xml_file, $force_import = false ) {
 		}
 
 		libxml_use_internal_errors( true );
-		$xml = simplexml_load_file( $xml_file );
+		$xml = simplexml_load_file( $xml_file, 'SimpleXMLElement', LIBXML_NONET );
 
 		if ( ! $xml ) {
 			$errors = libxml_get_errors();

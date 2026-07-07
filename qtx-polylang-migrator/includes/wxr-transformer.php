@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param string      $default_lang Default language code.
  * @return string
  */
-function qtxpm_process_wxr_content( $doc, $languages, $default_lang ) {
+function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $default_lang ): string {
 	$xpath = new DOMXPath( $doc );
 	$items_data = array();
 
@@ -188,7 +188,7 @@ function qtxpm_process_wxr_content( $doc, $languages, $default_lang ) {
  * @param array $items Array of items with their data.
  * @return array
  */
-function qtxpm_sort_items_by_hierarchy( $items ) {
+function qtxpm_sort_items_by_hierarchy( array $items ): array {
 	$sorted = array();
 	$root_items = array();
 
@@ -200,7 +200,7 @@ function qtxpm_sort_items_by_hierarchy( $items ) {
 
 	usort(
 		$root_items,
-		static function ( $item_a, $item_b ) {
+		static function ( array $item_a, array $item_b ): int {
 			if ( $item_a['menu_order'] === $item_b['menu_order'] ) {
 				return $item_a['original_id'] - $item_b['original_id'];
 			}
@@ -225,7 +225,7 @@ function qtxpm_sort_items_by_hierarchy( $items ) {
  * @param array $sorted Reference to sorted array to append children to.
  * @return void
  */
-function qtxpm_add_children_to_sorted( $items, $parent_id, &$sorted ) {
+function qtxpm_add_children_to_sorted( array $items, int $parent_id, array &$sorted ): void {
 	$children = array();
 
 	foreach ( $items as $item ) {
@@ -236,7 +236,7 @@ function qtxpm_add_children_to_sorted( $items, $parent_id, &$sorted ) {
 
 	usort(
 		$children,
-		static function ( $item_a, $item_b ) {
+		static function ( array $item_a, array $item_b ): int {
 			if ( $item_a['menu_order'] === $item_b['menu_order'] ) {
 				return $item_a['original_id'] - $item_b['original_id'];
 			}
@@ -255,11 +255,11 @@ function qtxpm_add_children_to_sorted( $items, $parent_id, &$sorted ) {
  * Add migration metadata to an item.
  *
  * @param DOMDocument $doc DOM document.
- * @param DOMElement  $item Item element to add meta to.
+ * @param DOMNode     $item Item element to add meta to.
  * @param array       $meta_data Associative array of meta_key => meta_value.
  * @return void
  */
-function qtxpm_add_migration_meta( $doc, $item, $meta_data ) {
+function qtxpm_add_migration_meta( DOMDocument $doc, DOMNode $item, array $meta_data ): void {
 	foreach ( $meta_data as $meta_key => $meta_value ) {
 		$meta_element = $doc->createElement( 'wp:postmeta' );
 		$meta_key_element = $doc->createElement( 'wp:meta_key' );
@@ -286,7 +286,7 @@ function qtxpm_get_language_aliases( string $language, array $target_languages =
 		array_unique(
 			array_filter(
 				array_map(
-					static function ( $target_language ): string {
+					static function ( mixed $target_language ): string {
 						return strtolower( trim( (string) $target_language ) );
 					},
 					$target_languages

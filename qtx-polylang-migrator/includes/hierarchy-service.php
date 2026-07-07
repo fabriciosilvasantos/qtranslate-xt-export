@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @return array{success: bool, message: string, details: array<int, string>}
  */
-function qtxpm_rebuild_hierarchy_process() {
+function qtxpm_rebuild_hierarchy_process(): array {
 	global $wpdb;
 
 	$result = array(
@@ -114,7 +114,7 @@ function qtxpm_rebuild_hierarchy_process() {
  *
  * @return array{updated: int, details: array<int, string>}
  */
-function qtxpm_rebuild_term_hierarchy() {
+function qtxpm_rebuild_term_hierarchy(): array {
 	global $wpdb;
 
 	$result = array(

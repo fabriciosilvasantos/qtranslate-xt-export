@@ -27,6 +27,7 @@ if ( ! defined( 'QTXPM_PLUGIN_VERSION' ) ) {
 	define( 'QTXPM_MIGRATION_PAGE_TITLE', 'qTranslate → Polylang Migrator' );
 	define( 'QTXPM_MIGRATION_MENU_TITLE', 'qTranslate Migrator' );
 	define( 'QTXPM_MIGRATION_TRANSIENT_PREFIX', 'qtxpm_' );
+	define( 'QTXPM_MAX_UPLOAD_BYTES', 50 * 1024 * 1024 );
 }
 
 /**
@@ -42,19 +43,9 @@ function qtxpm_load_textdomain(): void {
 	);
 }
 
-/**
- * Clean standalone migrator artifacts on uninstall.
- *
- * @return void
- */
-function qtxpm_uninstall(): void {
-	delete_transient( QTXPM_MIGRATION_TRANSIENT_PREFIX . 'staged_xml' );
-	delete_transient( QTXPM_MIGRATION_TRANSIENT_PREFIX . 'import_report' );
-	delete_transient( QTXPM_MIGRATION_TRANSIENT_PREFIX . 'migration_results' );
-	delete_option( 'qtxpm_current_migration_run' );
-}
-
 add_action( 'init', 'qtxpm_load_textdomain' );
-register_uninstall_hook( __FILE__, 'qtxpm_uninstall' );
+
+// Uninstall cleanup lives entirely in uninstall.php, which WordPress executes
+// instead of any register_uninstall_hook() callback when the file exists.
 
 require_once __DIR__ . '/admin/bootstrap.php';
