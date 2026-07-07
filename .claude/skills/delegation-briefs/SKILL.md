@@ -1,13 +1,13 @@
 ---
 name: delegation-briefs
-description: Templates de prompt para o gerente delegar tarefas aos agentes especialistas do qTranslate-XT com contexto completo. Use ao acionar qtx-polylang-expert, php-wp-reviewer, php-test-writer ou docs-changelog-maintainer via Task.
+description: Templates de prompt para o gerente delegar tarefas aos agentes especialistas do qTranslate-XT com contexto completo. Use ao acionar especialista-migracao, revisor-codigo, testador ou documentador via Task.
 ---
 
 # Briefs de delegação
 
 Especialistas **não veem a conversa** — todo prompt de delegação precisa ser autossuficiente. Inclua sempre: objetivo, arquivos/áreas, restrições e formato de retorno esperado.
 
-## qtx-polylang-expert (implementação/investigação)
+## especialista-migracao (implementação/investigação)
 
 ```
 Objetivo: <o que implementar/investigar, com critério de pronto>
@@ -18,7 +18,7 @@ considerar idiomas ausentes/parciais e as 3 sintaxes de bloco.
 Retorno: causa raiz com arquivo:linha, mudança feita, impacto em dados/compatibilidade, testes tocados.
 ```
 
-## php-wp-reviewer (revisão — somente leitura)
+## revisor-codigo (revisão — somente leitura)
 
 ```
 Objetivo: revisar o diff de <branch/commits ou lista de arquivos>.
@@ -29,7 +29,7 @@ Retorno: achados por severidade (Crítico→Baixo), cada um com arquivo:linha, p
 e correção sugerida. Diga explicitamente se nada foi encontrado.
 ```
 
-## php-test-writer (testes)
+## testador (testes)
 
 ```
 Objetivo: <cobrir a função X | corrigir os testes que falharam após Y>
@@ -40,7 +40,7 @@ Edge cases obrigatórios: idiomas ausentes, conteúdo vazio, entrada malformada,
 Retorno: testes adicionados/alterados, saída real do PHPUnit, bugs de produção revelados.
 ```
 
-## docs-changelog-maintainer (documentação)
+## documentador (documentação)
 
 ```
 Objetivo: <registrar a feature/correção X | bump para X.Y.Z>
