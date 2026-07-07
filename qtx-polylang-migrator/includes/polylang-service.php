@@ -53,7 +53,7 @@ function qtxpm_get_polylang_languages(): array {
 	$languages = array_merge( $languages, qtxpm_get_runtime_polylang_languages() );
 
 	$languages = array_map(
-		static function ( $language ): string {
+		static function ( mixed $language ): string {
 			return strtolower( trim( (string) $language ) );
 		},
 		(array) $languages
@@ -74,7 +74,7 @@ function qtxpm_get_runtime_polylang_languages(): array {
 		array_unique(
 			array_filter(
 				array_map(
-					static function ( $language ): string {
+					static function ( mixed $language ): string {
 						return strtolower( trim( (string) $language ) );
 					},
 					(array) $languages

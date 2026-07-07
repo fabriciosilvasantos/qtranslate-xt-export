@@ -3,8 +3,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function qtxpm_render_migration_page() {
-	$current_step = isset( $_GET['step'] ) ? $_GET['step'] : 'upload';
+/**
+ * Render the standalone migration admin page.
+ *
+ * @return void
+ */
+function qtxpm_render_migration_page(): void {
+	$current_step = isset( $_GET['step'] ) ? sanitize_key( wp_unslash( $_GET['step'] ) ) : 'upload';
 	$import_result = get_transient( qtxpm_get_migration_transient_key( 'import_report' ) );
 	$finalization_result = get_transient( qtxpm_get_migration_transient_key( 'migration_results' ) );
 	$labels = qtxpm_get_migration_labels();
@@ -27,7 +32,13 @@ function qtxpm_render_migration_page() {
 	<?php
 }
 
-function qtxpm_render_import_notices( $import_result ): void {
+/**
+ * Render notices for the direct XML import result.
+ *
+ * @param array<string, mixed>|false $import_result Import result or false when not available.
+ * @return void
+ */
+function qtxpm_render_import_notices( array|false $import_result ): void {
 	if ( ! $import_result ) {
 		return;
 	}
@@ -58,7 +69,14 @@ function qtxpm_render_import_notices( $import_result ): void {
 	<?php
 }
 
-function qtxpm_render_finalization_notices( $finalization_result, string $current_step ): void {
+/**
+ * Render notices for the hierarchy/connection finalization results.
+ *
+ * @param array<string, mixed>|false $finalization_result Finalization result or false when not available.
+ * @param string                     $current_step Current migration step.
+ * @return void
+ */
+function qtxpm_render_finalization_notices( array|false $finalization_result, string $current_step ): void {
 	if ( ! $finalization_result || 'results' !== $current_step ) {
 		return;
 	}
@@ -113,7 +131,14 @@ function qtxpm_render_progress_card( string $current_step ): void {
 	<?php
 }
 
-function qtxpm_render_step_card( string $current_step, $import_result ): void {
+/**
+ * Render the card corresponding to the current migration step.
+ *
+ * @param string                      $current_step Current migration step.
+ * @param array<string, mixed>|false $import_result Import result or false when not available.
+ * @return void
+ */
+function qtxpm_render_step_card( string $current_step, array|false $import_result ): void {
 	if ( 'upload' === $current_step ) {
 		qtxpm_render_upload_card();
 		return;
@@ -140,7 +165,7 @@ function qtxpm_render_upload_card(): void {
 		<h2><?php echo esc_html__( 'Passo 1: Upload do XML qTranslate-XT', 'qtx-polylang-migrator' ); ?></h2>
 		<p><?php echo esc_html__( 'Faca upload do arquivo XML exportado do site original com qTranslate-XT.', 'qtx-polylang-migrator' ); ?></p>
 		<form method="post" enctype="multipart/form-data">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_upload', 'qtxpm_migrator_nonce' ); ?>
 			<table class="form-table">
 				<tr>
 					<th scope="row"><label for="wxr_file"><?php echo esc_html__( 'Arquivo XML:', 'qtx-polylang-migrator' ); ?></label></th>
@@ -158,7 +183,13 @@ function qtxpm_render_upload_card(): void {
 	<?php
 }
 
-function qtxpm_render_wordpress_import_card( $import_result ): void {
+/**
+ * Render the WordPress import step card.
+ *
+ * @param array<string, mixed>|false $import_result Import result or false when not available.
+ * @return void
+ */
+function qtxpm_render_wordpress_import_card( array|false $import_result ): void {
 	?>
 	<div class="card" style="max-width: 800px; margin-top: 20px;">
 		<h2><?php echo esc_html__( 'Passo 2: Importar para WordPress', 'qtx-polylang-migrator' ); ?></h2>
@@ -173,7 +204,7 @@ function qtxpm_render_wordpress_import_card( $import_result ): void {
 			</div>
 		<?php endif; ?>
 		<form method="post">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_import', 'qtxpm_migrator_nonce' ); ?>
 			<table class="form-table">
 				<tr>
 					<th scope="row"><?php echo esc_html__( 'Opcoes de Importacao', 'qtx-polylang-migrator' ); ?></th>
@@ -203,7 +234,7 @@ function qtxpm_render_finalize_card(): void {
 			<p><strong><?php echo esc_html__( 'Atencao:', 'qtx-polylang-migrator' ); ?></strong> <?php echo esc_html__( 'Este processo ira reconstruir a estrutura de paginas e conectar todas as traducoes.', 'qtx-polylang-migrator' ); ?></p>
 		</div>
 		<form method="post">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_finalize', 'qtxpm_migrator_nonce' ); ?>
 			<p class="submit">
 				<input type="submit" name="finalize_migration" id="finalize_migration" class="button button-primary" value="<?php echo esc_attr__( 'Executar Migracao Completa', 'qtx-polylang-migrator' ); ?>">
 			</p>
@@ -234,7 +265,7 @@ function qtxpm_render_results_card(): void {
 		<h3><?php echo esc_html__( 'Reparar Duplicatas Orfas', 'qtx-polylang-migrator' ); ?></h3>
 		<p><?php echo esc_html__( 'Localize duplicatas seguras por idioma, mova orfaos para rascunho e reconecte os grupos no padrao do Polylang.', 'qtx-polylang-migrator' ); ?></p>
 		<form method="post">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_repair', 'qtxpm_migrator_nonce' ); ?>
 			<p class="submit">
 				<input type="submit" name="repair_translation_duplicates" id="repair_translation_duplicates" class="button" value="<?php echo esc_attr__( 'Reparar Duplicatas e Reconectar Traducoes', 'qtx-polylang-migrator' ); ?>">
 			</p>
