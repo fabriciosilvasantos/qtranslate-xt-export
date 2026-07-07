@@ -17,7 +17,7 @@ Siga na ordem. Não pule etapas nem as execute em paralelo.
 
 - Use a skill **version-sync-check** para os locais exatos.
 - Atualize `CHANGELOG.md` (entrada `### X.Y.Z` com itens agrupados Added/Fixed/Changed) e a seção `## Changelog` do `readme.txt`.
-- Delegue ao agente **docs-changelog-maintainer** quando estiver orquestrando.
+- Delegue ao agente **documentador** quando estiver orquestrando.
 
 ## 3. Gate de qualidade (obrigatório)
 
