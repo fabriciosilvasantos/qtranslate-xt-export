@@ -228,7 +228,7 @@ function qtxpm_deduplicate_translation_posts_process(): array {
 
 		usort(
 			$group_candidates,
-			static function ( $candidate_a, $candidate_b ) use ( $normalized_language ) {
+			static function ( object $candidate_a, object $candidate_b ) use ( $normalized_language ): int {
 				return qtxpm_compare_duplicate_candidates( $candidate_a, $candidate_b, $normalized_language );
 			}
 		);
@@ -352,7 +352,7 @@ function qtxpm_restore_post_languages( array $excluded_post_ids = array() ): arr
  *
  * @return array{success: bool, message: string, details: array<int, string>}
  */
-function qtxpm_connect_translations_process() {
+function qtxpm_connect_translations_process(): array {
 	global $wpdb;
 
 	$result = array(

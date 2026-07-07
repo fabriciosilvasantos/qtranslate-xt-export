@@ -3,7 +3,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function qtxpm_render_migration_page() {
+/**
+ * Render the standalone migration admin page.
+ *
+ * @return void
+ */
+function qtxpm_render_migration_page(): void {
 	$current_step = isset( $_GET['step'] ) ? $_GET['step'] : 'upload';
 	$import_result = get_transient( qtxpm_get_migration_transient_key( 'import_report' ) );
 	$finalization_result = get_transient( qtxpm_get_migration_transient_key( 'migration_results' ) );
@@ -27,7 +32,13 @@ function qtxpm_render_migration_page() {
 	<?php
 }
 
-function qtxpm_render_import_notices( $import_result ): void {
+/**
+ * Render notices for the direct XML import result.
+ *
+ * @param array<string, mixed>|false $import_result Import result or false when not available.
+ * @return void
+ */
+function qtxpm_render_import_notices( array|false $import_result ): void {
 	if ( ! $import_result ) {
 		return;
 	}
@@ -58,7 +69,14 @@ function qtxpm_render_import_notices( $import_result ): void {
 	<?php
 }
 
-function qtxpm_render_finalization_notices( $finalization_result, string $current_step ): void {
+/**
+ * Render notices for the hierarchy/connection finalization results.
+ *
+ * @param array<string, mixed>|false $finalization_result Finalization result or false when not available.
+ * @param string                     $current_step Current migration step.
+ * @return void
+ */
+function qtxpm_render_finalization_notices( array|false $finalization_result, string $current_step ): void {
 	if ( ! $finalization_result || 'results' !== $current_step ) {
 		return;
 	}
@@ -113,7 +131,14 @@ function qtxpm_render_progress_card( string $current_step ): void {
 	<?php
 }
 
-function qtxpm_render_step_card( string $current_step, $import_result ): void {
+/**
+ * Render the card corresponding to the current migration step.
+ *
+ * @param string                      $current_step Current migration step.
+ * @param array<string, mixed>|false $import_result Import result or false when not available.
+ * @return void
+ */
+function qtxpm_render_step_card( string $current_step, array|false $import_result ): void {
 	if ( 'upload' === $current_step ) {
 		qtxpm_render_upload_card();
 		return;
@@ -158,7 +183,13 @@ function qtxpm_render_upload_card(): void {
 	<?php
 }
 
-function qtxpm_render_wordpress_import_card( $import_result ): void {
+/**
+ * Render the WordPress import step card.
+ *
+ * @param array<string, mixed>|false $import_result Import result or false when not available.
+ * @return void
+ */
+function qtxpm_render_wordpress_import_card( array|false $import_result ): void {
 	?>
 	<div class="card" style="max-width: 800px; margin-top: 20px;">
 		<h2><?php echo esc_html__( 'Passo 2: Importar para WordPress', 'qtx-polylang-migrator' ); ?></h2>

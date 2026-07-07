@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param bool   $force_import Whether to ignore pre-existing posts.
  * @return array<string, mixed>
  */
-function qtxpm_direct_xml_import( $xml_file, $force_import = false ) {
+function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false ): array {
 	global $wpdb;
 
 	$result = array(

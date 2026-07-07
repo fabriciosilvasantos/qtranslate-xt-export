@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_action( 'admin_init', 'qtxpm_handle_import_process' );
 add_action( 'admin_menu', 'qtxpm_register_admin_menu' );
 
-function qtxpm_handle_import_process() {
+function qtxpm_handle_import_process(): void {
 	if ( ! isset( $_GET['page'] ) || $_GET['page'] !== qtxpm_get_migration_page_slug() ) {
 		return;
 	}
@@ -28,7 +28,7 @@ function qtxpm_handle_import_process() {
 	}
 }
 
-function qtxpm_register_admin_menu() {
+function qtxpm_register_admin_menu(): void {
 	$labels = qtxpm_get_migration_labels();
 
 	add_management_page(

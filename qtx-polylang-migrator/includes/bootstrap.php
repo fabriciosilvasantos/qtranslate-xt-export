@@ -35,7 +35,7 @@ if ( ! function_exists( 'qtxpm_split_multilingual_text' ) ) {
 			array_unique(
 				array_filter(
 					array_map(
-						static function ( $language ): string {
+						static function ( mixed $language ): string {
 							return strtolower( trim( (string) $language ) );
 						},
 						$languages
