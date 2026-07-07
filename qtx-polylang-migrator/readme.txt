@@ -4,7 +4,7 @@ Tags: migration, polylang, multilingual, import, qtranslate
 Requires at least: 6.9.4
 Tested up to: 7.0
 Requires PHP: 8.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -48,6 +48,14 @@ Sim. Quando o XML traz idiomas válidos ainda não configurados, o migrador tent
 O migrador preserva um item canônico e rebaixa duplicatas seguras para `draft`. O fluxo evita exclusão permanente automática.
 
 == Changelog ==
+
+= 0.2.0 =
+
+* Segurança: verificação de capability (`manage_options`) em todos os handlers de ação do admin.
+* Segurança: nonce dedicado por operação (upload, importação, finalização, reparo).
+* Segurança: validação de extensão/tipo e limite de tamanho (50MB, filtrável via `qtxpm_max_upload_bytes`) no upload de XML; parsing com `LIBXML_NONET`.
+* Correção: limpeza de desinstalação consolidada em `uninstall.php`, incluindo a option `qtxpm_current_migration_run`.
+* Qualidade: type hints completos de parâmetros e retornos em todos os serviços; sanitização do parâmetro `step` no admin.
 
 = 0.1.0 =
 
