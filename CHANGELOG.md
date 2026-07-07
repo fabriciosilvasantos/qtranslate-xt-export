@@ -1,3 +1,12 @@
+### 3.17.0
+* **BREAKING**: Removed the built-in Polylang migration admin interface (`src/admin/unified_migration.php`, ~635 lines). The migration workflow is now maintained exclusively as a standalone plugin, [`qtx-polylang-migrator`](qtx-polylang-migrator/), which must be installed and activated separately on the destination site.
+  * All migration screens previously announced in 3.16.2 (hierarchy reconstruction, validation, Polylang translation connector, language diagnostics, admin workflow navigation) now live in the standalone plugin and no longer depend on qTranslate-XT admin wrappers or bridge files.
+  * See `docs/IMPLEMENTACAO-QTX-POLYLANG-MIGRATOR.md` for the standalone plugin's architecture and `./run-tests.sh package-migrator` to build its distributable zip.
+* Update WordPress compatibility to 7.0 (Tested up to)
+* Harden code base for PHP 8.4 / PHPStan strictness (type hints, style fixes)
+* Add automated unit/integration test suite and Docker-based test environment (`./run-tests.sh`)
+* Fix fatal error (`TypeError`) when `default_language` is left outside `enabled_languages` (e.g. via WP-CLI, direct DB edits, or other plugins), which previously locked the entire site out of the admin
+
 ### 3.16.2
 * Update WordPress compatibility to 6.9.4
 * Update PHP compatibility to 8.4

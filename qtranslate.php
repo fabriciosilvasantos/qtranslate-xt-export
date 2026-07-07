@@ -3,7 +3,7 @@
  * Plugin Name: qTranslate-XT (Exportação)
  * Plugin URI: https://github.com/qtranslate/qtranslate-xt/
  * Description: Adds user-friendly multilingual content support, stored in single post.
- * Version: 3.16.2
+ * Version: 3.17.0
  * Requires at least: 5.0
  * Tested up to: 7.0
  * Requires PHP: 8.4
@@ -58,7 +58,7 @@ if ( ! function_exists( 'add_filter' ) ) {
  *
  * @see https://github.com/qtranslate/qtranslate-xt/wiki/Integration-Guide/
  */
-const QTX_VERSION = '3.16.2';
+const QTX_VERSION = '3.17.0';
 
 if ( ! defined( 'QTRANSLATE_FILE' ) ) {
 	define( 'QTRANSLATE_FILE', __FILE__ );

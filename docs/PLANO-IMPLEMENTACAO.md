@@ -23,31 +23,31 @@ Validar o estado real antes de qualquer merge. Não há evidência registrada de
   - Unitário: `OK (20 tests, 45 assertions)` · Integração: `OK (43 tests, 128 assertions)` · PHPStan: `[OK] No errors` · PHPCS: 69 arquivos sem violações.
 - [x] **1.2** Sem falhas — nenhuma correção necessária.
 
-## Fase 2 — Reconciliação de branches
+## Fase 2 — Reconciliação de branches ✅ concluída 2026-07-07
 
 Duas branches partem de `master` (`27b80c9`): a chore (extração do migrator) e a `worktree-agente-gerente` (agentes + skills, PR #1). `.claude/` está untracked na primeira e commitado na segunda.
 
-- [ ] 🔐 **2.1** Merge `chore/reformat-and-standalone-migrator` → `master` (via PR recomendado)
-  - Agente: **gerente** · Pronto quando: master contém a extração do migrator e o gate da Fase 1 está verde.
-- [ ] **2.2** Rebase/merge da branch `worktree-agente-gerente` sobre o novo master e atualização do PR #1
-  - Agente: **gerente** · Atenção: preservar `.claude/agents/` e `.claude/skills/`; resolver conflito com os arquivos untracked locais.
-- [ ] **2.3** Após merges: remover cópias untracked duplicadas de `.claude/` no checkout (passam a ser versionadas)
-  - Agente: **gerente** · Pronto quando: `git status` sem duplicidade e `/reload-plugins` carrega agentes/skills da versão do repositório.
+- [x] 🔐 **2.1** Merge `chore/reformat-and-standalone-migrator` → `master` (via PR recomendado) ✅ 2026-07-07
+  - Renomeação dos agentes/plano commitada em `6ecf65f`; PR #2 mergeado em `master` @ `371d90c` com a extração do migrator e o gate da Fase 1 verde.
+- [x] **2.2** Rebase/merge da branch `worktree-agente-gerente` sobre o novo master e atualização do PR #1 ✅ 2026-07-07
+  - PR #1 fechado como superado pelo conteúdo já incorporado via `6ecf65f`/PR #2; `.claude/agents/` e `.claude/skills/` preservados.
+- [x] **2.3** Após merges: remover cópias untracked duplicadas de `.claude/` no checkout (passam a ser versionadas) ✅ 2026-07-07
+  - Sem duplicidade remanescente após o merge; `.claude/` versionado a partir de `371d90c`.
 
-## Fase 3 — Documentação e versão (docs stale = risco de release enganoso)
+## Fase 3 — Documentação e versão (docs stale = risco de release enganoso) ✅ concluída 2026-07-07
 
-- [ ] **3.1** Nova entrada no `CHANGELOG.md` documentando a **extração** da migração embutida para o plugin standalone (a entrada 3.16.2 descreve UI de migração que não existe mais na raiz)
+- [x] **3.1** Nova entrada no `CHANGELOG.md` documentando a **extração** da migração embutida para o plugin standalone (a entrada 3.16.2 descreve UI de migração que não existe mais na raiz) ✅ 2026-07-07
   - Agente: **documentador** (skills `version-sync-check`, `readme-txt-format`).
-- [ ] **3.2** Decidir e aplicar bump de versão da raiz (3.16.3 ou 3.17.0 — a remoção de feature sugere minor: **3.17.0**)
-  - Agente: **documentador** · Sincronizar: header `Version:` + `QTX_VERSION` em `qtranslate.php`, `CHANGELOG.md`, `## Changelog` do `readme.txt` (Stable tag permanece `N/A`).
-- [ ] **3.3** Corrigir `README.md` linhas ~20–25: remover "Polylang Export"/"Migration Scripts" como features da raiz; apontar para `qtx-polylang-migrator/`
+- [x] **3.2** Decidir e aplicar bump de versão da raiz (3.16.3 ou 3.17.0 — a remoção de feature sugere minor: **3.17.0**) ✅ 2026-07-07
+  - Agente: **documentador** · Sincronizado: header `Version:` + `QTX_VERSION` em `qtranslate.php` → `3.17.0`; `CHANGELOG.md`; `## Changelog` do `readme.txt` (referencia CHANGELOG.md, sem entrada duplicada; Stable tag permanece `N/A`).
+- [x] **3.3** Corrigir `README.md` linhas ~20–25: remover "Polylang Export"/"Migration Scripts" como features da raiz; apontar para `qtx-polylang-migrator/` ✅ 2026-07-07
   - Agente: **documentador**.
-- [ ] **3.4** Corrigir `readme.txt`: "Requires at least: 5.0" incongruente com "Requires PHP: 8.4"
-  - Agente: **documentador**.
-- [ ] **3.5** Corrigir inconsistência interna de `docs/IMPLEMENTACAO-QTX-POLYLANG-MIGRATOR.md` (linha ~92 lista wrapper legado como ativo; linha ~132 diz que foi removido)
-  - Agente: **documentador**.
-- [ ] **3.6** Unificar idioma do `README.md` (seções em PT dentro de doc EN, linhas ~57–65)
-  - Agente: **documentador**.
+- [x] **3.4** Corrigir `readme.txt`: "Requires at least: 5.0" incongruente com "Requires PHP: 8.4" ✅ 2026-07-07
+  - Agente: **documentador** · Ajustado para `Requires at least: 6.0` em `readme.txt` e `README.md`, coerente com `Tested up to: 7.0`/`Requires PHP: 8.4`.
+- [x] **3.5** Corrigir inconsistência interna de `docs/IMPLEMENTACAO-QTX-POLYLANG-MIGRATOR.md` (linha ~92 lista wrapper legado como ativo; linha ~132 diz que foi removido) ✅ 2026-07-07
+  - Agente: **documentador** · Removida a linha da lista de capacidades que citava a manutenção do wrapper legado.
+- [x] **3.6** Unificar idioma do `README.md` (seções em PT dentro de doc EN, linhas ~57–65) ✅ 2026-07-07
+  - Agente: **documentador** · Seções "Implementação Técnica"/"Resumo do estado atual"/"Empacotamento" traduzidas para inglês; label de menu "Ferramentas" → "Tools".
 
 ## Fase 4 — Limpeza de código
 
@@ -101,8 +101,8 @@ Fase 0 (hoje) → Fase 1 → Fase 2 → Fase 3 ─┬→ Fase 7
 | Risco | Mitigação | Status |
 |---|---|---|
 | Perda dos commits locais (crítico) | Fase 0.1 | ✅ mitigado 2026-07-07 (branch no origin) |
-| Conflito `.claude/` entre branches | Fase 2.2–2.3 | ⏳ aberto — `.claude/` agora versionado na chore (`de36fc1`) com nomes antigos; renomeação pendente de commit |
+| Conflito `.claude/` entre branches | Fase 2.2–2.3 | ✅ resolvido 2026-07-07 (renomeação commitada em `6ecf65f`, PR #2 mergeado em `master` @ `371d90c`, PR #1 fechado como superado) |
 | Vazamento de dados reais da UENF (WXR em tmp/) | Fase 5.2 (anonimizar) | ⏳ aberto |
-| Release com docs enganosas | Fase 3 antes da 7 | ⏳ aberto |
+| Release com docs enganosas | Fase 3 antes da 7 | ✅ mitigado 2026-07-07 (CHANGELOG/README/readme.txt/docs sincronizados; versão 3.17.0) |
 | Falsa cobertura do teste unitário | Fase 5.1 | ⏳ aberto |
 | Scripts órfãos inseguros commitados por engano | Fase 4.1–4.2 | ✅ resolvido (scripts removidos do disco) |
