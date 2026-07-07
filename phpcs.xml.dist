@@ -1,0 +1,303 @@
+<?xml version="1.0"?>
+<ruleset name="qTranslate-XT Ruleset">
+    <description>Regras de estilo de código do qTranslate-XT baseadas nos Padrões de Codificação do WordPress.</description>
+
+    <!-- Usar o Padrão Oficial do WordPress -->
+    <rule ref="WordPress-Core"/>
+    <rule ref="WordPress-Docs"/>
+
+    <!-- Suavizar regras de comentários -->
+    <rule ref="Squiz.Commenting.InlineComment.InvalidEndChar">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FileComment.SpacingAfterComment">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FileComment.MissingPackageTag">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.BlockComment.NoEmptyLineBefore">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FileComment.Missing">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PSR2.Files.ClosingTag.NotAllowed">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Strings.DoubleQuoteUsage.NotRequired">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.WhiteSpace.DisallowSpaceIndent.SpacesUsed">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.WhiteSpace.ArbitraryParenthesesSpacing.SpaceBeforeClose">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PEAR.Functions.FunctionCallSignature.SpaceAfterOpenBracket">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PEAR.Functions.FunctionCallSignature.SpaceBeforeCloseBracket">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.PHP.YodaConditions.NotYoda">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.WhiteSpace.ArbitraryParenthesesSpacing.SpaceAfterOpen">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WhiteSpace.ControlStructureSpacing.NoSpaceAfterOpenParenthesis">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WhiteSpace.ControlStructureSpacing.NoSpaceBeforeCloseParenthesis">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.Formatting.MultipleStatementAlignment.NotSameWarning">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.WhiteSpace.SuperfluousWhitespace.EndLine">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.Arrays.ArrayKeySpacingRestrictions.NoSpacesAroundArrayKeys">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.Arrays.DisallowShortArraySyntax.Found">
+        <severity>0</severity>
+    </rule>
+    <rule ref="NormalizedArrays.Arrays.CommaAfterLast.MissingMultiLine">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.Arrays.MultipleStatementAlignment.DoubleArrowNotAligned">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Modernize.FunctionCalls.Dirname.FileConstant">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PEAR.Files.IncludingFile.BracketsNotRequired">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WhiteSpace.OperatorSpacing.NoSpaceBefore">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WhiteSpace.OperatorSpacing.NoSpaceAfter">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Modernize.FunctionCalls.Dirname.Nested">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.Missing">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.PHP.StrictInArray.MissingTrueStrict">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.Operators.StrictComparisons.LooseEqual">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.Commenting.DocComment.MissingShort">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WP.I18n.MissingTranslatorsComment">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.Files.FileName.InvalidClassFileName">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.ControlStructures.InlineControlStructure.NotAllowed">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PEAR.Functions.FunctionCallSignature.CloseBracketLine">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.WrongStyle">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PEAR.Functions.FunctionCallSignature.ContentAfterOpenBracket">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.Operators.DisallowStandalonePostIncrementDecrement.PostIncrementFound">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.Operators.StrictComparisons.LooseNotEqual">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WhiteSpace.ControlStructureSpacing.BlankLineAfterEnd">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PEAR.Functions.FunctionCallSignature.MultipleArguments">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.PHP.NoSilencedErrors.Discouraged">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.MissingParamComment">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.PHP.DisallowMultipleAssignments.FoundInControlStructure">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.CodeAnalysis.AssignmentInCondition.FoundInWhileCondition">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.CodeAnalysis.AssignmentInCondition.Found">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.ParamCommentFullStop">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.Commenting.DocComment.ShortNotCapital">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.PHP.DisallowMultipleAssignments.Found">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.NamingConventions.ValidHookName.UseUnderscores">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.DB.PreparedSQL.NotPrepared">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames.varFound">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.Commenting.DocComment.Empty">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.MissingParamTag">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PSR2.ControlStructures.SwitchDeclaration.WrongOpenercase">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.DB.PreparedSQL.InterpolatedNotPrepared">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.VariableComment.Missing">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames.objectFound">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PEAR.NamingConventions.ValidClassName.StartWithCapital">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.ClassComment.Missing">
+        <severity>0</severity>
+    </rule>
+    <rule ref="NormalizedArrays.Arrays.ArrayBraceSpacing.SpaceBeforeArrayCloserSingleLine">
+        <severity>0</severity>
+    </rule>
+    <rule ref="NormalizedArrays.Arrays.ArrayBraceSpacing.SpaceAfterArrayOpenerSingleLine">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.ParamNameNoMatch">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.IncorrectTypeHint">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.ControlStructures.ControlSignature.SpaceAfterCloseBrace">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames.matchFound">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionCommentThrowTag.Missing">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Scope.MethodScope.Missing">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.ClassComment.WrongStyle">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.NamingConventions.ValidVariableName.VariableNotSnakeCase">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WhiteSpace.ControlStructureSpacing.NoSpaceAfterCloseParenthesis">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.InlineComment.NoSpaceBefore">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.ControlStructures.ControlSignature.SpaceAfterCloseParenthesis">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.Commenting.DocComment.SpacingBeforeTags">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WhiteSpace.ControlStructureSpacing.OpenBraceNotSameLine">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.SpacingAfterParamType">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FileComment.WrongStyle">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.DateTime.RestrictedFunctions.date_date">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.Operators.DisallowShortTernary.Found">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WP.I18n.NonSingularStringLiteralText">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Generic.Formatting.MultipleStatementAlignment.IncorrectWarning">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.FunctionComment.MissingParamType">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.DB.PreparedSQLPlaceholders.QuotedSimplePlaceholder">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.WP.I18n.InterpolatedVariableText">
+        <severity>0</severity>
+    </rule>
+    <rule ref="WordPress.NamingConventions.ValidFunctionName.MethodNameInvalid">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.ClassComment.SpacingAfter">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.Commenting.BlockComment.NoCapital">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Squiz.ControlStructures.ControlSignature.NewlineAfterOpenBrace">
+        <severity>0</severity>
+    </rule>
+    <rule ref="Universal.NamingConventions.NoReservedKeywordParameterNames.stringFound">
+        <severity>0</severity>
+    </rule>
+    <rule ref="PSR2.ControlStructures.SwitchDeclaration.WrongOpenerdefault">
+        <severity>0</severity>
+    </rule>
+
+    <!-- Argumentos úteis -->
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <!-- Diretórios para verificar -->
+    <file>src/</file>
+    <file>qtranslate.php</file>
+    <exclude-pattern>/vendor/</exclude-pattern>
+    <exclude-pattern>/node_modules/</exclude-pattern>
+    <exclude-pattern>/tests/</exclude-pattern>
+    <exclude-pattern>/dist/</exclude-pattern>
+    <exclude-pattern>/dev/</exclude-pattern>
+</ruleset>

@@ -1,11 +1,12 @@
 <?php
 /**
  * Admin handler for the block editor (Gutenberg)
+ *
  * @author: herrvigg
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 /**
@@ -15,212 +16,211 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Limitation: only the single language mode is supported.
  */
 class QTX_Admin_Block_Editor {
-    /**
-     * Constructor.
-     */
-    public function __construct() {
-        add_action( 'rest_api_init', array( $this, 'rest_api_init' ) );
-        add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_editor_assets' ) );
-    }
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'rest_api_init', array( $this, 'rest_api_init' ) );
+		add_action( 'enqueue_block_editor_assets', array( $this, 'enqueue_block_editor_assets' ) );
+	}
 
-    /**
-     * Register the REST filters
-     */
-    public function rest_api_init(): void {
-        global $q_config;
+	/**
+	 * Register the REST filters
+	 */
+	public function rest_api_init(): void {
+		global $q_config;
 
-        // Filter to allow qTranslate-XT to manage the block editor (single language mode)
-        $admin_block_editor = apply_filters( 'qtranslate_admin_block_editor', true );
-        if ( ! $admin_block_editor ) {
-            return;
-        }
+		// Filter to allow qTranslate-XT to manage the block editor (single language mode)
+		$admin_block_editor = apply_filters( 'qtranslate_admin_block_editor', true );
+		if ( ! $admin_block_editor ) {
+			return;
+		}
 
-        $post_types = get_post_types( array( 'show_in_rest' => true ) );
-        foreach ( $post_types as $post_type ) {
-            $post_type_excluded = isset( $q_config['post_type_excluded'] ) && in_array( $post_type, $q_config['post_type_excluded'] );
-            if ( ! $post_type_excluded ) {
-                add_filter( "rest_prepare_{$post_type}", array( $this, 'rest_prepare' ), 99, 3 );
-            }
-        }
+		$post_types = get_post_types( array( 'show_in_rest' => true ) );
+		foreach ( $post_types as $post_type ) {
+			$post_type_excluded = isset( $q_config['post_type_excluded'] ) && in_array( $post_type, $q_config['post_type_excluded'] );
+			if ( ! $post_type_excluded ) {
+				add_filter( "rest_prepare_{$post_type}", array( $this, 'rest_prepare' ), 99, 3 );
+			}
+		}
 
-        add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ), 99, 3 );
-        add_filter( 'rest_request_after_callbacks', array( $this, 'rest_request_after_callbacks' ), 99, 3 );
-    }
+		add_filter( 'rest_request_before_callbacks', array( $this, 'rest_request_before_callbacks' ), 99, 3 );
+		add_filter( 'rest_request_after_callbacks', array( $this, 'rest_request_after_callbacks' ), 99, 3 );
+	}
 
-    /**
-     * Prepare the REST request for a post being edited
-     *
-     * Set the raw content and the 'qtx_editor_lang' field for the current language.
-     *
-     * @param WP_REST_Response $response
-     * @param WP_Post $post
-     * @param WP_REST_Request $request
-     *
-     * @return mixed
-     */
-    public function rest_prepare( WP_REST_Response $response, WP_Post $post, WP_REST_Request $request ) {
-        global $q_config;
+	/**
+	 * Prepare the REST request for a post being edited
+	 *
+	 * Set the raw content and the 'qtx_editor_lang' field for the current language.
+	 *
+	 * @param WP_REST_Response $response
+	 * @param WP_Post          $post
+	 * @param WP_REST_Request  $request
+	 *
+	 * @return mixed
+	 */
+	public function rest_prepare( WP_REST_Response $response, WP_Post $post, WP_REST_Request $request ) {
+		global $q_config;
 
-        if ( $request->get_param( 'context' ) !== 'edit' || $request->get_method() !== 'GET' ) {
-            return $response;
-        }
+		if ( $request->get_param( 'context' ) !== 'edit' || $request->get_method() !== 'GET' ) {
+			return $response;
+		}
 
-        // See https://github.com/WordPress/gutenberg/issues/14012#issuecomment-467015362
-        require_once ABSPATH . 'wp-admin/includes/post.php';
+		// See https://github.com/WordPress/gutenberg/issues/14012#issuecomment-467015362
+		require_once ABSPATH . 'wp-admin/includes/post.php';
 
-        if ( ! use_block_editor_for_post( $post ) ) {
-            return $response;
-        }
+		if ( ! use_block_editor_for_post( $post ) ) {
+			return $response;
+		}
 
-        assert( ! $q_config['url_info']['doing_front_end'] );
+		assert( ! $q_config['url_info']['doing_front_end'] );
 
-        // TODO allow user to select editor lang with buttons
-        $editor_lang = $q_config['url_info']['language'];
+		// TODO allow user to select editor lang with buttons
+		$editor_lang = $q_config['url_info']['language'];
 
-        return $this->select_raw_response_language( $response, $editor_lang );
-    }
+		return $this->select_raw_response_language( $response, $editor_lang );
+	}
 
-    /**
-     * Intercepts the post update and recompose the multi-language fields before being written in DB
-     * For title, content, excerpt:
-     * - the new input value is only for the current language (single language mode)
-     * - retrieve the other languages from the post in DB
-     * It is hacky, but we don't have all ML data on the client-side.
-     *
-     * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response
-     * @param array $handler
-     * @param WP_REST_Request $request
-     *
-     * @return mixed REST response
-     */
-    public function rest_request_before_callbacks( $response, array $handler, WP_REST_Request $request ) {
-        if ( $request->get_method() !== 'PUT' && $request->get_method() !== 'POST' ) {
-            return $response;
-        }
+	/**
+	 * Intercepts the post update and recompose the multi-language fields before being written in DB
+	 * For title, content, excerpt:
+	 * - the new input value is only for the current language (single language mode)
+	 * - retrieve the other languages from the post in DB
+	 * It is hacky, but we don't have all ML data on the client-side.
+	 *
+	 * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response
+	 * @param array                                            $handler
+	 * @param WP_REST_Request                                  $request
+	 *
+	 * @return mixed REST response
+	 */
+	public function rest_request_before_callbacks( $response, array $handler, WP_REST_Request $request ) {
+		if ( $request->get_method() !== 'PUT' && $request->get_method() !== 'POST' ) {
+			return $response;
+		}
 
-        $editor_lang = $request->get_param( 'qtx_editor_lang' );
-        if ( ! isset( $editor_lang ) ) {
-            return $response;
-        }
+		$editor_lang = $request->get_param( 'qtx_editor_lang' );
+		if ( ! isset( $editor_lang ) ) {
+			return $response;
+		}
 
-        $request_body = json_decode( $request->get_body(), true );
-        $post         = get_post( $request->get_param( 'id' ), ARRAY_A );
+		$request_body = json_decode( $request->get_body(), true );
+		$post         = get_post( $request->get_param( 'id' ), ARRAY_A );
 
-        $fields = [ 'title', 'content', 'excerpt' ];
-        foreach ( $fields as $field ) {
-            if ( ! isset( $request_body[ $field ] ) ) {
-                continue; // only the changed fields are set in the REST request
-            }
+		$fields = array( 'title', 'content', 'excerpt' );
+		foreach ( $fields as $field ) {
+			if ( ! isset( $request_body[ $field ] ) ) {
+				continue; // only the changed fields are set in the REST request
+			}
 
-            // Local function to replace the new value with full ML content, updated with the input for the current language
-            $replace_post_field_editor_lang = function ( string &$raw_value ) use ( $field, $post, $editor_lang ): void {
-                // split original post values with empty strings by default
-                $original_value        = $post[ 'post_' . $field ];
-                $split                 = qtranxf_split( $original_value );
-                $split[ $editor_lang ] = $raw_value;
-                // remove auto-draft default title for other languages (not the correct translation)
-                if ( $field === 'title' && $post['post_status'] === 'auto-draft' ) {
-                    global $q_config;
-                    foreach ( $q_config['enabled_languages'] as $lang ) {
-                        if ( $lang !== $editor_lang ) {
-                            $split[ $lang ] = '';
-                        }
-                    }
-                }
+			// Local function to replace the new value with full ML content, updated with the input for the current language
+			$replace_post_field_editor_lang = function ( string &$raw_value ) use ( $field, $post, $editor_lang ): void {
+				// split original post values with empty strings by default
+				$original_value        = $post[ 'post_' . $field ];
+				$split                 = qtranxf_split( $original_value );
+				$split[ $editor_lang ] = $raw_value;
+				// remove auto-draft default title for other languages (not the correct translation)
+				if ( $field === 'title' && $post['post_status'] === 'auto-draft' ) {
+					global $q_config;
+					foreach ( $q_config['enabled_languages'] as $lang ) {
+						if ( $lang !== $editor_lang ) {
+							$split[ $lang ] = '';
+						}
+					}
+				}
 
-                $raw_value = qtranxf_join_b( $split );
-            };
+				$raw_value = qtranxf_join_b( $split );
+			};
 
-            // Attention: the input can come as string or array[ 'raw': value, 'rendered': xxx ]
-            // We store only raw values, for string it is implicitly raw.
-            // The input structure should not be modified in the request, only the raw value.
-            $request_field = $request_body[ $field ];
-            if ( is_string( $request_field ) ) {
-                $replace_post_field_editor_lang( $request_field );
-            } elseif ( is_array( $request_field ) && isset( $request_field['raw'] ) ) {
-                $replace_post_field_editor_lang( $request_field['raw'] );
-            }
+			// Attention: the input can come as string or array[ 'raw': value, 'rendered': xxx ]
+			// We store only raw values, for string it is implicitly raw.
+			// The input structure should not be modified in the request, only the raw value.
+			$request_field = $request_body[ $field ];
+			if ( is_string( $request_field ) ) {
+				$replace_post_field_editor_lang( $request_field );
+			} elseif ( is_array( $request_field ) && isset( $request_field['raw'] ) ) {
+				$replace_post_field_editor_lang( $request_field['raw'] );
+			}
 
-            $request->set_param( $field, $request_field );
-        }
+			$request->set_param( $field, $request_field );
+		}
 
-        return $response;
-    }
+		return $response;
+	}
 
-    /**
-     * Restore the raw content of the post just updated and set the 'qtx_editor_lang', as for the before REST step.
-     * For the DB update all languages were set, now we return only values for the current language to the REST client.
-     *
-     * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response
-     * @param array $handler
-     * @param WP_REST_Request $request
-     *
-     * @return mixed REST response
-     */
-    public function rest_request_after_callbacks( $response, array $handler, WP_REST_Request $request ) {
-        if ( ! $response instanceof WP_HTTP_Response // This includes WP_REST_Response that derives from it.
-             || $request->get_param( 'context' ) !== 'edit' || ( $request->get_method() !== 'PUT' && $request->get_method() !== 'POST' ) ) {
-            return $response;
-        }
+	/**
+	 * Restore the raw content of the post just updated and set the 'qtx_editor_lang', as for the before REST step.
+	 * For the DB update all languages were set, now we return only values for the current language to the REST client.
+	 *
+	 * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response
+	 * @param array                                            $handler
+	 * @param WP_REST_Request                                  $request
+	 *
+	 * @return mixed REST response
+	 */
+	public function rest_request_after_callbacks( $response, array $handler, WP_REST_Request $request ) {
+		if ( ! $response instanceof WP_HTTP_Response // This includes WP_REST_Response that derives from it.
+			|| $request->get_param( 'context' ) !== 'edit' || ( $request->get_method() !== 'PUT' && $request->get_method() !== 'POST' ) ) {
+			return $response;
+		}
 
-        $editor_lang = $request->get_param( 'qtx_editor_lang' );
-        if ( ! isset( $editor_lang ) ) {
-            return $response;
-        }
+		$editor_lang = $request->get_param( 'qtx_editor_lang' );
+		if ( ! isset( $editor_lang ) ) {
+			return $response;
+		}
 
-        return $this->select_raw_response_language( $response, $editor_lang );
-    }
+		return $this->select_raw_response_language( $response, $editor_lang );
+	}
 
-    /**
-     * Enqueue the JS script
-     */
-    public function enqueue_block_editor_assets(): void {
-        // By default, excluded post types are filtered out.
-        global $q_config;
-        $post_type          = qtranxf_post_type();
-        $post_type_excluded = isset( $q_config['post_type_excluded'] ) && isset( $post_type ) && in_array( $post_type, $q_config['post_type_excluded'] );
+	/**
+	 * Enqueue the JS script
+	 */
+	public function enqueue_block_editor_assets(): void {
+		// By default, excluded post types are filtered out.
+		global $q_config;
+		$post_type          = qtranxf_post_type();
+		$post_type_excluded = isset( $q_config['post_type_excluded'] ) && isset( $post_type ) && in_array( $post_type, $q_config['post_type_excluded'] );
 
-        // Filter to allow qTranslate-XT to manage the block editor (single language mode)
-        $admin_block_editor = apply_filters( 'qtranslate_admin_block_editor', ! $post_type_excluded );
-        if ( ! $admin_block_editor ) {
-            return;
-        }
+		// Filter to allow qTranslate-XT to manage the block editor (single language mode)
+		$admin_block_editor = apply_filters( 'qtranslate_admin_block_editor', ! $post_type_excluded );
+		if ( ! $admin_block_editor ) {
+			return;
+		}
 
-        wp_register_script(
-            'qtx-block-editor',
-            plugins_url( 'dist/block-editor.js', QTRANSLATE_FILE ),
-            array( 'wp-api-fetch', 'wp-data' ),
-            QTX_VERSION,
-            true
-        );
-        wp_enqueue_script( 'qtx-block-editor' );
-    }
+		wp_register_script(
+			'qtx-block-editor',
+			plugins_url( 'dist/block-editor.js', QTRANSLATE_FILE ),
+			array( 'wp-api-fetch', 'wp-data' ),
+			QTX_VERSION,
+			true
+		);
+		wp_enqueue_script( 'qtx-block-editor' );
+	}
 
-    /**
-     * Replace the multi-language raw content with only the current language used for edition and set 'qtx_editor_lang'
-     *
-     * @param WP_HTTP_Response|WP_REST_Response $response
-     * @param string $editor_lang
-     *
-     * @return WP_HTTP_Response|WP_REST_Response
-     */
-    private function select_raw_response_language( $response, string $editor_lang ) {
-        $response_data = $response->get_data();
-        if ( isset( $response_data['title']['raw'] ) ) {
-            $response_data['title']['raw'] = qtranxf_use( $editor_lang, $response_data['title']['raw'], false, true );
-        }
-        if ( isset( $response_data['content']['raw'] ) ) {
-            $response_data['content']['raw'] = qtranxf_use( $editor_lang, $response_data['content']['raw'], false, true );
-        }
-        if ( isset( $response_data['excerpt']['raw'] ) ) {
-            $response_data['excerpt']['raw'] = qtranxf_use( $editor_lang, $response_data['excerpt']['raw'], false, true );
-        }
-        $response_data['qtx_editor_lang'] = $editor_lang;
-        $response->set_data( $response_data );
+	/**
+	 * Replace the multi-language raw content with only the current language used for edition and set 'qtx_editor_lang'
+	 *
+	 * @param WP_HTTP_Response|WP_REST_Response $response
+	 * @param string                            $editor_lang
+	 *
+	 * @return WP_HTTP_Response|WP_REST_Response
+	 */
+	private function select_raw_response_language( $response, string $editor_lang ) {
+		$response_data = $response->get_data();
+		if ( isset( $response_data['title']['raw'] ) ) {
+			$response_data['title']['raw'] = qtranxf_use( $editor_lang, $response_data['title']['raw'], false, true );
+		}
+		if ( isset( $response_data['content']['raw'] ) ) {
+			$response_data['content']['raw'] = qtranxf_use( $editor_lang, $response_data['content']['raw'], false, true );
+		}
+		if ( isset( $response_data['excerpt']['raw'] ) ) {
+			$response_data['excerpt']['raw'] = qtranxf_use( $editor_lang, $response_data['excerpt']['raw'], false, true );
+		}
+		$response_data['qtx_editor_lang'] = $editor_lang;
+		$response->set_data( $response_data );
 
-        return $response;
-    }
-
+		return $response;
+	}
 }
 
 new QTX_Admin_Block_Editor();

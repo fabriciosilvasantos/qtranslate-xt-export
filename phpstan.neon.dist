@@ -1,0 +1,20 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+parameters:
+    phpVersion: 80400
+    level: 2 # Nível de rigor da tipagem e detecção de bugs (0 = básico a 9 = estrito)
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    scanFiles:
+        - tests/acf_stubs.php
+        - tests/woocommerce_stubs.php
+        - tests/polylang_stubs.php
+        - tests/wp_class_stubs.php
+    paths:
+        - src/
+        - qtx-polylang-migrator/
+        - qtranslate.php
+    excludePaths:
+        - vendor/
+        - node_modules/
+        - tests/

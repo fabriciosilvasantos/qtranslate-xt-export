@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    bootstrap="tests/bootstrap-integration.php"
+    backupGlobals="false"
+    colors="true"
+    convertErrorsToExceptions="true"
+    convertNoticesToExceptions="true"
+    convertWarningsToExceptions="true"
+    verbose="true"
+    >
+    <testsuites>
+        <testsuite name="qTranslate-XT Integration Tests">
+            <directory suffix="_Test.php">./tests/integration/</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

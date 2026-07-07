@@ -1,53 +1,53 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 function qtranxf_wc_add_filters_front(): void {
 
-    remove_filter( 'get_post_metadata', 'qtranxf_filter_postmeta', 5 );
-    add_filter( 'get_post_metadata', 'qtranxf_wc_filter_postmeta', 5, 4 );
+	remove_filter( 'get_post_metadata', 'qtranxf_filter_postmeta', 5 );
+	add_filter( 'get_post_metadata', 'qtranxf_wc_filter_postmeta', 5, 4 );
 
-    $front_hooks = array(
-        'woocommerce_attribute'                       => 20,
-        'woocommerce_attribute_label'                 => 20,
-        'woocommerce_cart_item_name'                  => 20,
-        'woocommerce_cart_item_thumbnail'             => 20,
-        'woocommerce_cart_shipping_method_full_label' => 20,
-        'woocommerce_cart_tax_totals'                 => 20,
-        'woocommerce_email_footer_text'               => 20,
-        'woocommerce_format_content'                  => 20,
-        'woocommerce_gateway_description'             => 20,
-        'woocommerce_gateway_title'                   => 20,
-        'woocommerce_gateway_icon'                    => 20,
-        'woocommerce_get_privacy_policy_text'         => 20,
-        'woocommerce_order_item_display_meta_value'   => 20,
-        'woocommerce_order_item_name'                 => 20,
-        'woocommerce_order_get_tax_totals'            => 20,
-        'woocommerce_order_shipping_to_display'       => 20,
-        'woocommerce_order_subtotal_to_display'       => 20,
-        'woocommerce_page_title'                      => 20,
-        'woocommerce_product_get_name'                => 20,
-        'woocommerce_product_title'                   => 20,
-        'woocommerce_rate_label'                      => 20,
-        'woocommerce_short_description'               => 20,
-        'woocommerce_variation_option_name'           => 20,
-        'wp_mail_from_name'                           => 20,
-    );
+	$front_hooks = array(
+		'woocommerce_attribute'                       => 20,
+		'woocommerce_attribute_label'                 => 20,
+		'woocommerce_cart_item_name'                  => 20,
+		'woocommerce_cart_item_thumbnail'             => 20,
+		'woocommerce_cart_shipping_method_full_label' => 20,
+		'woocommerce_cart_tax_totals'                 => 20,
+		'woocommerce_email_footer_text'               => 20,
+		'woocommerce_format_content'                  => 20,
+		'woocommerce_gateway_description'             => 20,
+		'woocommerce_gateway_title'                   => 20,
+		'woocommerce_gateway_icon'                    => 20,
+		'woocommerce_get_privacy_policy_text'         => 20,
+		'woocommerce_order_item_display_meta_value'   => 20,
+		'woocommerce_order_item_name'                 => 20,
+		'woocommerce_order_get_tax_totals'            => 20,
+		'woocommerce_order_shipping_to_display'       => 20,
+		'woocommerce_order_subtotal_to_display'       => 20,
+		'woocommerce_page_title'                      => 20,
+		'woocommerce_product_get_name'                => 20,
+		'woocommerce_product_title'                   => 20,
+		'woocommerce_rate_label'                      => 20,
+		'woocommerce_short_description'               => 20,
+		'woocommerce_variation_option_name'           => 20,
+		'wp_mail_from_name'                           => 20,
+	);
 
-    qtranxf_add_filters( [ 'text' => $front_hooks ] );
+	qtranxf_add_filters( array( 'text' => $front_hooks ) );
 
-    add_action( 'woocommerce_dropdown_variation_attribute_options_args', 'qtranxf_wc_dropdown_variation_attribute_options_args', 10, 1 );
-    add_filter( 'woocommerce_paypal_args', 'qtranxf_wc_paypal_args' );
+	add_filter( 'woocommerce_dropdown_variation_attribute_options_args', 'qtranxf_wc_dropdown_variation_attribute_options_args', 10, 1 );
+	add_filter( 'woocommerce_paypal_args', 'qtranxf_wc_paypal_args' );
 }
 
 function qtranxf_wc_filter_postmeta( $original_value, int $object_id, string $meta_key = '', bool $single = false ) {
-    switch ( $meta_key ) {
-        case '_product_attributes':
-            return $original_value;
-        default:
-            return qtranxf_filter_postmeta( $original_value, $object_id, $meta_key, $single );
-    }
+	switch ( $meta_key ) {
+		case '_product_attributes':
+			return $original_value;
+		default:
+			return qtranxf_filter_postmeta( $original_value, $object_id, $meta_key, $single );
+	}
 }
 
 /**
@@ -64,14 +64,13 @@ function qtranxf_wc_filter_postmeta( $original_value, int $object_id, string $me
  *
  * @return array
  * @see wc_dropdown_variation_attribute_options (single-product/add-to-cart/variable.php)
- *
  */
 function qtranxf_wc_dropdown_variation_attribute_options_args( $args ) {
-    if ( isset( $args['options'] ) ) {
-        $args['options'] = qtranxf_useCurrentLanguageIfNotFoundUseDefaultLanguage( $args['options'] );
-    }
+	if ( isset( $args['options'] ) ) {
+		$args['options'] = qtranxf_useCurrentLanguageIfNotFoundUseDefaultLanguage( $args['options'] );
+	}
 
-    return $args;
+	return $args;
 }
 
 /**
@@ -82,19 +81,19 @@ function qtranxf_wc_dropdown_variation_attribute_options_args( $args ) {
  */
 add_action( 'woocommerce_checkout_update_order_meta', 'qtranxf_wc_save_post_meta', 100 );
 function qtranxf_wc_save_post_meta( $order_id ) {
-    global $q_config;
-    add_post_meta( $order_id, '_user_language', $q_config['language'], true );
+	global $q_config;
+	add_post_meta( $order_id, '_user_language', $q_config['language'], true );
 }
 
 function qtranxf_wc_paypal_args( $args ) {
-    $args['lc'] = get_locale();
+	$args['lc'] = get_locale();
 
-    return $args;
+	return $args;
 }
 
 // Prevent unintended filtering when webhooks are fired (through cron for cases where $urlinfo['doing_front_end'] is true).
 if ( ! wp_doing_cron() ) {
-    qtranxf_wc_add_filters_front();
+	qtranxf_wc_add_filters_front();
 }
 
 /**
@@ -105,9 +104,9 @@ if ( ! wp_doing_cron() ) {
  * @return string cart hash with language information
  */
 function qtranxf_wc_get_cart_hash( $cart ): string {
-    $lang = qtranxf_getLanguage();
+	$lang = qtranxf_getLanguage();
 
-    return md5( json_encode( $cart ) . $lang );
+	return md5( json_encode( $cart ) . $lang );
 }
 
 /**
@@ -117,8 +116,8 @@ function qtranxf_wc_get_cart_hash( $cart ): string {
  * @param array $cart wc variable holding contents of the cart without language information.
  */
 function qtranxf_wc_set_cookies_cart_hash( $cart ): void {
-    $hash = qtranxf_wc_get_cart_hash( $cart );
-    wc_setcookie( 'woocommerce_cart_hash', $hash );
+	$hash = qtranxf_wc_get_cart_hash( $cart );
+	wc_setcookie( 'woocommerce_cart_hash', $hash );
 }
 
 /**
@@ -128,11 +127,11 @@ function qtranxf_wc_set_cookies_cart_hash( $cart ): void {
  * @param WC_Cart $wc_cart wc object without language information.
  */
 function qtranxf_wc_cart_loaded_from_session( $wc_cart ): void {
-    if ( headers_sent() ) {
-        return;
-    }
-    $cart = $wc_cart->get_cart_for_session();
-    qtranxf_wc_set_cookies_cart_hash( $cart );
+	if ( headers_sent() ) {
+		return;
+	}
+	$cart = $wc_cart->get_cart_for_session();
+	qtranxf_wc_set_cookies_cart_hash( $cart );
 }
 
 add_action( 'woocommerce_cart_loaded_from_session', 'qtranxf_wc_cart_loaded_from_session', 5 );
@@ -144,12 +143,12 @@ add_action( 'woocommerce_cart_loaded_from_session', 'qtranxf_wc_cart_loaded_from
  * @param bool $set is true if cookies need to be set, otherwse they are unset in calling function.
  */
 function qtranxf_wc_set_cart_cookies( $set ): void {
-    if ( $set ) {
-        $wc      = WC();
-        $wc_cart = $wc->cart;
-        $cart    = $wc_cart->get_cart_for_session();
-        qtranxf_wc_set_cookies_cart_hash( $cart );
-    }
+	if ( $set ) {
+		$wc      = WC();
+		$wc_cart = $wc->cart;
+		$cart    = $wc_cart->get_cart_for_session();
+		qtranxf_wc_set_cookies_cart_hash( $cart );
+	}
 }
 
 add_action( 'woocommerce_set_cart_cookies', 'qtranxf_wc_set_cart_cookies' );
@@ -159,17 +158,17 @@ add_action( 'woocommerce_set_cart_cookies', 'qtranxf_wc_set_cart_cookies' );
  * Response to action 'woocommerce_cart_hash' which overwrites the default WC cart hash and cookies.
  *
  * @param string $hash default WC hash.
- * @param array $cart wc variable holding contents of the cart without language information.
+ * @param array  $cart wc variable holding contents of the cart without language information.
  *
  * @return string cart hash with language information
  */
 function qtranxf_wc_cart_hash( $hash, $cart ) {
-    $new_hash = qtranxf_wc_get_cart_hash( $cart );
-    if ( ! headers_sent() ) {
-        wc_setcookie( 'woocommerce_cart_hash', $new_hash );
-    }
+	$new_hash = qtranxf_wc_get_cart_hash( $cart );
+	if ( ! headers_sent() ) {
+		wc_setcookie( 'woocommerce_cart_hash', $new_hash );
+	}
 
-    return $new_hash;
+	return $new_hash;
 }
 
 add_filter( 'woocommerce_cart_hash', 'qtranxf_wc_cart_hash', 5, 2 );

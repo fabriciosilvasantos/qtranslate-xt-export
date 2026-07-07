@@ -1,2 +1,20 @@
 .idea/
 node_modules/
+build/
+vendor/
+/tmp/
+
+# Artefatos de execução (não versionar)
+phpstan_errors*.json
+phpstan_current_errors.json
+phpstan_results.json
+.phpunit.result.cache
+.playwright-cli/
+
+# Scratch/exports de desenvolvimento do migrator
+qtx-polylang-migrator/tmp/
+
+# Config local do Claude Code e ferramentas de agentes
+.claude/settings.local.json
+.claude/worktrees/
+.agent/

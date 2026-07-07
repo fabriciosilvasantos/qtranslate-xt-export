@@ -1,3 +1,17 @@
+### 3.16.2
+* Update WordPress compatibility to 6.9.4
+* Update PHP compatibility to 8.4
+* Update plugin header and documentation files
+* **NEW**: Admin interface for hierarchy reconstruction
+* **NEW**: Automated page structure preservation during Polylang migration
+* **NEW**: Built-in validation and error handling for migration process
+* **NEW**: Comprehensive migration workflow with user feedback
+* **NEW**: Complete Polylang migration guide with step-by-step instructions
+* **NEW**: Automatic Polylang translation connector
+* **NEW**: Language diagnostics tool for troubleshooting
+* **NEW**: Integrated admin interfaces for all migration steps
+* **NEW**: Visual workflow navigation and progress tracking
+
 ### 3.16.1
 * Fix `array_any` not supported in PHP 7.4 (#1473)
 

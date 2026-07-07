@@ -1,0 +1,115 @@
+x-php-test-service: &php-test-service
+  build:
+    context: .
+    dockerfile: docker/php-test-runner.Dockerfile
+  image: qtranslate-xt-export/php-test-runner:local
+  restart: "no"
+  working_dir: /app
+  volumes:
+    - ./:/app
+    - composer_cache:/tmp/composer-cache
+  networks:
+    - qtranslate_network
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: qtranslate_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - qtranslate_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  wordpress:
+    image: wordpress:7.0-php8.4-apache
+    container_name: qtranslate_wp
+    restart: always
+    ports:
+      - "8088:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DEBUG: 1
+      WORDPRESS_ADMIN_USER: admin
+      WORDPRESS_ADMIN_PASSWORD: admin
+      WORDPRESS_ADMIN_EMAIL: admin@example.com
+    volumes:
+      - ./:/var/www/html/wp-content/plugins/qtranslate-xt-export
+      - ./qtx-polylang-migrator:/var/www/html/wp-content/plugins/qtx-polylang-migrator
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - qtranslate_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  wordpress_source:
+    image: wordpress:7.0-php8.4-apache
+    container_name: qtranslate_wp_source
+    restart: always
+    ports:
+      - "8089:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress_source
+      WORDPRESS_DEBUG: 1
+    volumes:
+      - ./:/var/www/html/wp-content/plugins/qtranslate-xt-export
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - qtranslate_network
+
+  phpunit:
+    <<: *php-test-service
+    container_name: qtranslate_phpunit
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["./vendor/bin/phpunit"]
+
+  phpunit-integration:
+    <<: *php-test-service
+    container_name: qtranslate_phpunit_integration
+    command: ["./vendor/bin/phpunit", "--configuration", "phpunit-integration.xml.dist"]
+
+  phpstan:
+    <<: *php-test-service
+    container_name: qtranslate_phpstan
+    command: ["./vendor/bin/phpstan", "analyse", "-c", "phpstan.neon.dist", "--memory-limit=2G", "--no-progress"]
+
+  phpcs:
+    <<: *php-test-service
+    container_name: qtranslate_phpcs
+    command: ["./vendor/bin/phpcs", "--standard=phpcs.xml.dist"]
+
+networks:
+  qtranslate_network:
+    driver: bridge
+
+volumes:
+  db_data:
+  composer_cache:

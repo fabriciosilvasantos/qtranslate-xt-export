@@ -11,7 +11,6 @@ require_once QTRANSLATE_DIR . '/src/admin/admin_taxonomy.php';
 
 // Load admin modules
 require_once __DIR__ . '/import_export.php';
-require_once __DIR__ . '/unified_migration.php';
 /**
  * @see qtranxf_collect_translations
  */
