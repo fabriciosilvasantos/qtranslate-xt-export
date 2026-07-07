@@ -52,9 +52,8 @@ Duas branches partem de `master` (`27b80c9`): a chore (extração do migrator) e
 ## Fase 4 — Limpeza de código
 
 - [x] **4.1**/**4.2** Scripts órfãos `diagnose_languages.php` e `rebuild_hierarchy.php` ✅ resolvidos externamente (removidos do disco pelo usuário; nunca foram commitados) — verificado em 2026-07-07.
-- [ ] **4.3** Completar type hints (parâmetros + retorno) nas 11+ funções sem tipos do migrator
-  - Agente: **especialista-migracao** · Arquivos: `wxr-transformer.php`, `xml-import-service.php`, `hierarchy-service.php`, `duplicate-repair-service.php`, `admin-actions.php`, `admin-render.php`.
-  - Pronto quando: PHPStan verde e revisão do **revisor-codigo** sem achados Crítico/Alto.
+- [x] **4.3** Completar type hints (parâmetros + retorno) nas 11+ funções sem tipos do migrator ✅ 2026-07-07
+  - 18+ funções tipadas em 8 arquivos (commit `22493ff`); PHPStan `[OK] No errors`; re-revisão do **revisor-codigo** sem achados e sem risco de `TypeError` (uniões `array|false` p/ transients, `DOMNode` p/ clones).
 
 ## Fase 5 — Testes do migrator
 
@@ -67,8 +66,10 @@ Duas branches partem de `master` (`27b80c9`): a chore (extração do migrator) e
 
 ## Fase 6 — Segurança
 
-- [ ] **6.1** Revisão de segurança dedicada da camada admin do migrator: upload/parse de XML (XXE, limites de tamanho, validação de mime), escaping em `admin-render.php`
-  - Agente: **revisor-codigo** (skill `run-quality-gate`) · Pronto quando: relatório por severidade emitido; achados Crítico/Alto corrigidos pelo **especialista-migracao** e re-revisados.
+- [x] **6.1** Revisão de segurança dedicada da camada admin do migrator ✅ 2026-07-07
+  - 1ª rodada (**revisor-codigo**): 1 Alto (capability ausente em 3 handlers de `admin_init`), 3 Médios (nonce único, upload sem mime/tamanho, uninstall duplicado/incompleto), 2 Baixos; XXE/SQLi/path traversal/escaping verificados OK.
+  - Correções (**especialista-migracao**, commit `1b2cdad`): capability + nonces por operação + `wp_check_filetype`/`QTXPM_MAX_UPLOAD_BYTES` (50MB filtrável) + uninstall consolidado + `sanitize_key` + restauração libxml + `LIBXML_NONET`.
+  - Re-revisão: **APTO para merge** — todos corrigidos, sem regressões. Follow-up não bloqueante registrado (restaurar `libxml_use_internal_errors` também em `qtxpm_direct_xml_import`, `xml-import-service.php:29`).
 
 ## Fase 7 — Release
 
@@ -84,6 +85,7 @@ Duas branches partem de `master` (`27b80c9`): a chore (extração do migrator) e
 ## Pendência de longo prazo (sem fase)
 
 - [ ] i18n do migrator para novos locales (hoje só `pt_BR`) — **especialista-migracao** + **documentador**.
+- [ ] Follow-up da re-revisão de segurança (não bloqueante): restaurar o estado de `libxml_use_internal_errors` em `qtxpm_direct_xml_import` (`xml-import-service.php:29`), no padrão aplicado em `admin-actions.php` — **especialista-migracao**.
 
 ---
 
