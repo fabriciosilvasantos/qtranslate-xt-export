@@ -27,7 +27,7 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false )
 		}
 
 		libxml_use_internal_errors( true );
-		$xml = simplexml_load_file( $xml_file );
+		$xml = simplexml_load_file( $xml_file, 'SimpleXMLElement', LIBXML_NONET );
 
 		if ( ! $xml ) {
 			$errors = libxml_get_errors();

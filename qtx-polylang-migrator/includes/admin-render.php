@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return void
  */
 function qtxpm_render_migration_page(): void {
-	$current_step = isset( $_GET['step'] ) ? $_GET['step'] : 'upload';
+	$current_step = isset( $_GET['step'] ) ? sanitize_key( wp_unslash( $_GET['step'] ) ) : 'upload';
 	$import_result = get_transient( qtxpm_get_migration_transient_key( 'import_report' ) );
 	$finalization_result = get_transient( qtxpm_get_migration_transient_key( 'migration_results' ) );
 	$labels = qtxpm_get_migration_labels();
@@ -165,7 +165,7 @@ function qtxpm_render_upload_card(): void {
 		<h2><?php echo esc_html__( 'Passo 1: Upload do XML qTranslate-XT', 'qtx-polylang-migrator' ); ?></h2>
 		<p><?php echo esc_html__( 'Faca upload do arquivo XML exportado do site original com qTranslate-XT.', 'qtx-polylang-migrator' ); ?></p>
 		<form method="post" enctype="multipart/form-data">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_upload', 'qtxpm_migrator_nonce' ); ?>
 			<table class="form-table">
 				<tr>
 					<th scope="row"><label for="wxr_file"><?php echo esc_html__( 'Arquivo XML:', 'qtx-polylang-migrator' ); ?></label></th>
@@ -204,7 +204,7 @@ function qtxpm_render_wordpress_import_card( array|false $import_result ): void 
 			</div>
 		<?php endif; ?>
 		<form method="post">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_import', 'qtxpm_migrator_nonce' ); ?>
 			<table class="form-table">
 				<tr>
 					<th scope="row"><?php echo esc_html__( 'Opcoes de Importacao', 'qtx-polylang-migrator' ); ?></th>
@@ -234,7 +234,7 @@ function qtxpm_render_finalize_card(): void {
 			<p><strong><?php echo esc_html__( 'Atencao:', 'qtx-polylang-migrator' ); ?></strong> <?php echo esc_html__( 'Este processo ira reconstruir a estrutura de paginas e conectar todas as traducoes.', 'qtx-polylang-migrator' ); ?></p>
 		</div>
 		<form method="post">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_finalize', 'qtxpm_migrator_nonce' ); ?>
 			<p class="submit">
 				<input type="submit" name="finalize_migration" id="finalize_migration" class="button button-primary" value="<?php echo esc_attr__( 'Executar Migracao Completa', 'qtx-polylang-migrator' ); ?>">
 			</p>
@@ -265,7 +265,7 @@ function qtxpm_render_results_card(): void {
 		<h3><?php echo esc_html__( 'Reparar Duplicatas Orfas', 'qtx-polylang-migrator' ); ?></h3>
 		<p><?php echo esc_html__( 'Localize duplicatas seguras por idioma, mova orfaos para rascunho e reconecte os grupos no padrao do Polylang.', 'qtx-polylang-migrator' ); ?></p>
 		<form method="post">
-			<?php wp_nonce_field( 'qtxpm_migration_action', 'qtxpm_migrator_nonce' ); ?>
+			<?php wp_nonce_field( 'qtxpm_migration_action_repair', 'qtxpm_migrator_nonce' ); ?>
 			<p class="submit">
 				<input type="submit" name="repair_translation_duplicates" id="repair_translation_duplicates" class="button" value="<?php echo esc_attr__( 'Reparar Duplicatas e Reconectar Traducoes', 'qtx-polylang-migrator' ); ?>">
 			</p>

@@ -42,22 +42,22 @@ function qtxpm_register_admin_menu(): void {
 
 function qtxpm_is_upload_request(): bool {
 	return isset( $_POST['submit'], $_POST['qtxpm_migrator_nonce'] ) &&
-		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action' );
+		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action_upload' );
 }
 
 function qtxpm_is_import_request(): bool {
 	return isset( $_POST['wordpress_import'], $_POST['qtxpm_migrator_nonce'] ) &&
-		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action' );
+		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action_import' );
 }
 
 function qtxpm_is_finalize_request(): bool {
 	return isset( $_POST['finalize_migration'], $_POST['qtxpm_migrator_nonce'] ) &&
-		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action' );
+		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action_finalize' );
 }
 
 function qtxpm_is_repair_request(): bool {
 	return isset( $_POST['repair_translation_duplicates'], $_POST['qtxpm_migrator_nonce'] ) &&
-		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action' );
+		wp_verify_nonce( wp_unslash( $_POST['qtxpm_migrator_nonce'] ), 'qtxpm_migration_action_repair' );
 }
 
 function qtxpm_process_uploaded_xml(): void {
@@ -67,6 +67,19 @@ function qtxpm_process_uploaded_xml(): void {
 
 	if ( empty( $_FILES['wxr_file']['tmp_name'] ) || ! is_uploaded_file( $_FILES['wxr_file']['tmp_name'] ) ) {
 		wp_die( esc_html__( 'Por favor, envie um arquivo WXR valido.', 'qtx-polylang-migrator' ) );
+	}
+
+	$file_name = isset( $_FILES['wxr_file']['name'] ) ? (string) $_FILES['wxr_file']['name'] : '';
+	$file_type = wp_check_filetype( $file_name, array( 'xml' => 'text/xml' ) );
+	if ( empty( $file_type['ext'] ) ) {
+		wp_die( esc_html__( 'Tipo de arquivo invalido. Envie um arquivo .xml.', 'qtx-polylang-migrator' ) );
+	}
+
+	$default_max_upload_bytes = defined( 'QTXPM_MAX_UPLOAD_BYTES' ) ? QTXPM_MAX_UPLOAD_BYTES : 52428800;
+	$max_upload_bytes = (int) apply_filters( 'qtxpm_max_upload_bytes', $default_max_upload_bytes );
+	$file_size = isset( $_FILES['wxr_file']['size'] ) ? (int) $_FILES['wxr_file']['size'] : 0;
+	if ( $file_size > $max_upload_bytes ) {
+		wp_die( esc_html__( 'Arquivo excede o tamanho maximo permitido.', 'qtx-polylang-migrator' ) );
 	}
 
 	$file = $_FILES['wxr_file']['tmp_name'];
@@ -80,11 +93,14 @@ function qtxpm_process_uploaded_xml(): void {
 	$doc->preserveWhiteSpace = false;
 	$doc->formatOutput = true;
 
-	libxml_use_internal_errors( true );
-	if ( ! @$doc->load( $file ) ) {
+	$previous_libxml_errors = libxml_use_internal_errors( true );
+	$loaded = @$doc->load( $file, LIBXML_NONET );
+	libxml_clear_errors();
+	libxml_use_internal_errors( $previous_libxml_errors );
+
+	if ( ! $loaded ) {
 		wp_die( esc_html__( 'Erro ao ler o arquivo XML. Verifique se e uma exportacao WXR do WordPress valida.', 'qtx-polylang-migrator' ) );
 	}
-	libxml_clear_errors();
 
 	$languages = qtxpm_detect_wxr_languages( $doc, $site_languages, $default_lang );
 	if ( '' === $default_lang ) {
@@ -98,6 +114,10 @@ function qtxpm_process_uploaded_xml(): void {
 }
 
 function qtxpm_process_wordpress_import(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Acesso negado.', 'qtx-polylang-migrator' ) );
+	}
+
 	$processed_xml = get_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
 	if ( ! $processed_xml ) {
 		wp_die( esc_html__( 'Nenhum XML processado encontrado. Por favor, processe um arquivo primeiro.', 'qtx-polylang-migrator' ) );
@@ -150,6 +170,10 @@ function qtxpm_process_wordpress_import(): void {
 }
 
 function qtxpm_finalize_migration(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Acesso negado.', 'qtx-polylang-migrator' ) );
+	}
+
 	$results = array(
 		'hierarchy'  => qtxpm_rebuild_hierarchy_process(),
 		'connection' => qtxpm_connect_translations_process(),
@@ -160,6 +184,10 @@ function qtxpm_finalize_migration(): void {
 }
 
 function qtxpm_repair_translation_duplicates(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Acesso negado.', 'qtx-polylang-migrator' ) );
+	}
+
 	$existing_results = get_transient( qtxpm_get_migration_transient_key( 'migration_results' ) );
 	$results = is_array( $existing_results ) ? $existing_results : array();
 	$results['repair'] = qtxpm_connect_translations_process();
