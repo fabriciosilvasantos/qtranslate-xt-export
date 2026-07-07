@@ -89,3 +89,44 @@ Entregas:
 - testes ajustados para carregar diretamente o engine do plugin standalone
 - wrapper legado em `src/admin/migration_wrapper.php` removido
 - carregamento do admin do qTranslate-XT deixou de registrar a tela antiga da migração
+
+### 6. Bug: contaminação de metadados entre execuções de migração
+
+Status: aberto
+
+Contexto (encontrado em teste E2E de 2026-07-07, WordPress 7.0):
+
+Ao rodar uma segunda migração em um site de destino que já recebeu uma migração
+anterior, os metadados `_pll_migration_original_id` / `_pll_migration_parent_id` /
+`_pll_migration_lang` da execução antiga permanecem no banco e colidem com os da
+nova execução (os IDs originais dos dois exports se sobrepõem — ex.: `original_id=5`
+apontando para 4 posts de sites diferentes).
+
+Sintomas observados:
+
+- `hierarchy-service.php` mapeia `original_parent_id` para o post errado
+  (página nova ficou filha de página da migração anterior)
+- os pares de tradução da segunda migração não são conectados no Polylang
+- combinado com o reparo de duplicatas, pares válidos novos podem ser
+  rebaixados para `draft`
+
+Direções de correção possíveis:
+
+- etiquetar os metadados com um ID de execução (batch) e escopar todas as
+  queries dos serviços à execução corrente
+- e/ou limpar os metadados `_pll_migration_*` ao final de uma migração
+  concluída com sucesso
+
+### 7. Observação de UX: fluxo já é encadeado
+
+O passo "Importar para WordPress" já executa a migração completa (hierarquia,
+conexão e dedup) e redireciona para `step=results`. Os botões separados
+"Executar Migracao Completa" sugerem etapas manuais que não existem mais no
+fluxo real — simplificar a UI ou documentar.
+
+### Registro de compatibilidade
+
+- 2026-07-07: pipeline completo validado sob WordPress 7.0 (export de site
+  qTranslate-XT 3.16.2 em WP 7.0 → migrator em WP 7.0 + Polylang 3.8.5).
+  Em destino limpo o fluxo é íntegro; o bug do item 6 afeta apenas
+  re-execuções em destino já migrado.

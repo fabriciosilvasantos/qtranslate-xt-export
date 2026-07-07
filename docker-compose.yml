@@ -62,6 +62,27 @@ services:
       timeout: 10s
       retries: 3
 
+  wordpress_source:
+    image: wordpress:7.0-php8.4-apache
+    container_name: qtranslate_wp_source
+    restart: always
+    ports:
+      - "8089:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress_source
+      WORDPRESS_DEBUG: 1
+    volumes:
+      - ./:/var/www/html/wp-content/plugins/qtranslate-xt-export
+      - ./uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - qtranslate_network
+
   phpunit:
     <<: *php-test-service
     container_name: qtranslate_phpunit

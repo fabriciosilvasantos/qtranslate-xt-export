@@ -5,7 +5,7 @@
  * Description: Adds user-friendly multilingual content support, stored in single post.
  * Version: 3.16.2
  * Requires at least: 5.0
- * Tested up to: 6.9.4
+ * Tested up to: 7.0
  * Requires PHP: 8.4
  * Author: qTranslate Community
  * Author URI: https://github.com/qtranslate/
