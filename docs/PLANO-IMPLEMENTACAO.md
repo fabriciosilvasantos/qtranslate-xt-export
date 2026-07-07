@@ -19,10 +19,9 @@ O risco mais crítico do projeto: os 7 commits da extração do migrator existem
 
 Validar o estado real antes de qualquer merge. Não há evidência registrada de que as suítes passaram.
 
-- [ ] **1.1** Rodar `./run-tests.sh all` na branch chore e registrar a saída real
-  - Agente: **gerente** (skill `run-tests`) · Pronto quando: 4 suítes verdes (PHPUnit unit + integration + PHPStan + PHPCS) com saída anotada neste documento ou no PR.
-- [ ] **1.2** Se houver falhas: delegar correção
-  - Testes quebrados → **testador** · Erros de stan/phpcs → **especialista-migracao** com revisão do **revisor-codigo**.
+- [x] **1.1** Rodar `./run-tests.sh all` na branch chore ✅ 2026-07-07, gate verde (branch @ `f28e038`, PHP 8.4.18, PHPUnit 9.6.34):
+  - Unitário: `OK (20 tests, 45 assertions)` · Integração: `OK (43 tests, 128 assertions)` · PHPStan: `[OK] No errors` · PHPCS: 69 arquivos sem violações.
+- [x] **1.2** Sem falhas — nenhuma correção necessária.
 
 ## Fase 2 — Reconciliação de branches
 
