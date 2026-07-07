@@ -89,8 +89,6 @@ As capacidades hoje implementadas incluem:
 - reconstrução de hierarquia de páginas
 - conexão de traduções via API do Polylang
 - deduplicação e reparo de duplicatas órfãs com rebaixamento seguro para `draft`
-- manutenção de um wrapper legado no qTranslate-XT para transição
- 
 
 Também foi preservado o contrato interno de metadados `_pll_migration_*`, para evitar quebrar o processamento já construído em torno da migração.
 
