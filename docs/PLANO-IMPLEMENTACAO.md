@@ -10,11 +10,10 @@
 
 O risco mais crítico do projeto: os 7 commits da extração do migrator existem apenas no disco local.
 
-- [ ] 🔐 **0.1** Push da branch `chore/reformat-and-standalone-migrator` para o origin
-  - Agente: **gerente** · Comando: `git push -u origin chore/reformat-and-standalone-migrator`
-  - Pronto quando: branch visível no GitHub com os 7 commits (`f9f823d` → `f4f01db`).
-- [ ] **0.2** Conferir que nada relevante ficou untracked além dos scripts órfãos conhecidos
-  - Agente: **gerente** · `git status` limpo exceto `.claude/`, `.agent/`, `src/admin/diagnose_languages.php`, `src/admin/rebuild_hierarchy.php`.
+- [x] 🔐 **0.1** Push da branch `chore/reformat-and-standalone-migrator` para o origin ✅ 2026-07-07
+  - Branch já estava no origin (@ `f28e038`, 10 commits sobre master — 3 além dos avaliados: gitignore de config local, versionamento de `.claude/`, pin do WordPress 7.0 no Docker); tracking configurado.
+- [x] **0.2** Conferir untracked ✅ 2026-07-07
+  - Scripts órfãos `diagnose_languages.php`/`rebuild_hierarchy.php` **removidos do disco** (resolve 4.1/4.2). Pendência restante: a renomeação dos agentes (.claude) e este plano ainda não commitados na chore — tratar na Fase 2.
 
 ## Fase 1 — Gate de qualidade da branch chore
 
@@ -53,10 +52,7 @@ Duas branches partem de `master` (`27b80c9`): a chore (extração do migrator) e
 
 ## Fase 4 — Limpeza de código
 
-- [ ] **4.1** Avaliar os scripts órfãos `src/admin/diagnose_languages.php` e `src/admin/rebuild_hierarchy.php`: há lógica de valor não coberta pelo migrator standalone?
-  - Agente: **especialista-migracao** · Pronto quando: parecer registrado (manter/portar/remover).
-- [ ] 🔐 **4.2** Executar a decisão: remover os scripts (provável) ou portar a lógica para página admin segura no migrator
-  - Agente: **especialista-migracao** · Motivo da urgência: fazem `require_once` direto de `wp-config.php`/`wp-load.php` (inseguro) e um `git add -A` descuidado os commitaria.
+- [x] **4.1**/**4.2** Scripts órfãos `diagnose_languages.php` e `rebuild_hierarchy.php` ✅ resolvidos externamente (removidos do disco pelo usuário; nunca foram commitados) — verificado em 2026-07-07.
 - [ ] **4.3** Completar type hints (parâmetros + retorno) nas 11+ funções sem tipos do migrator
   - Agente: **especialista-migracao** · Arquivos: `wxr-transformer.php`, `xml-import-service.php`, `hierarchy-service.php`, `duplicate-repair-service.php`, `admin-actions.php`, `admin-render.php`.
   - Pronto quando: PHPStan verde e revisão do **revisor-codigo** sem achados Crítico/Alto.
@@ -105,9 +101,9 @@ Fase 0 (hoje) → Fase 1 → Fase 2 → Fase 3 ─┬→ Fase 7
 
 | Risco | Mitigação | Status |
 |---|---|---|
-| Perda dos 7 commits locais (crítico) | Fase 0.1 | ⏳ aberto |
-| Conflito `.claude/` entre branches | Fase 2.2–2.3 | ⏳ aberto |
+| Perda dos commits locais (crítico) | Fase 0.1 | ✅ mitigado 2026-07-07 (branch no origin) |
+| Conflito `.claude/` entre branches | Fase 2.2–2.3 | ⏳ aberto — `.claude/` agora versionado na chore (`de36fc1`) com nomes antigos; renomeação pendente de commit |
 | Vazamento de dados reais da UENF (WXR em tmp/) | Fase 5.2 (anonimizar) | ⏳ aberto |
 | Release com docs enganosas | Fase 3 antes da 7 | ⏳ aberto |
 | Falsa cobertura do teste unitário | Fase 5.1 | ⏳ aberto |
-| Scripts órfãos inseguros commitados por engano | Fase 4.1–4.2 | ⏳ aberto |
+| Scripts órfãos inseguros commitados por engano | Fase 4.1–4.2 | ✅ resolvido (scripts removidos do disco) |
