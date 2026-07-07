@@ -96,6 +96,10 @@ if ( ! function_exists( 'qtx_wordpress_stub_reset' ) ) {
 		$GLOBALS['qtx_wp_post_meta'] = array();
 		$GLOBALS['qtx_wp_deleted_term_relationships'] = array();
 		$GLOBALS['qtx_wp_options'] = array();
+		$GLOBALS['qtx_wp_current_user_can'] = true;
+		$GLOBALS['qtx_wp_verify_nonce_result'] = 1;
+		$GLOBALS['qtx_wp_admin_pages'] = array();
+		$GLOBALS['qtx_wp_redirects'] = array();
 	}
 }
 
@@ -454,6 +458,12 @@ if ( ! function_exists( 'sanitize_text_field' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_unslash' ) ) {
+	function wp_unslash( $value ) {
+		return is_array( $value ) ? array_map( 'wp_unslash', $value ) : ( is_string( $value ) ? stripslashes( $value ) : $value );
+	}
+}
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -488,7 +498,71 @@ if ( ! function_exists( 'wp_nonce_field' ) ) {
 
 if ( ! function_exists( 'wp_verify_nonce' ) ) {
 	function wp_verify_nonce( $nonce, $action = -1 ) {
-		return 1;
+		// Defaults to "valid" (matches historical stub behavior); tests that
+		// need to simulate an invalid/missing nonce can set
+		// $GLOBALS['qtx_wp_verify_nonce_result'] to a falsy value.
+		return $GLOBALS['qtx_wp_verify_nonce_result'] ?? 1;
+	}
+}
+
+if ( ! class_exists( 'QTX_WP_Die_Stub_Exception' ) ) {
+	/**
+	 * Thrown by the wp_die() stub below instead of terminating the PHP
+	 * process, so tests can assert that wp_die() was reached without
+	 * killing the PHPUnit run.
+	 */
+	class QTX_WP_Die_Stub_Exception extends RuntimeException {
+	}
+}
+
+if ( ! function_exists( 'wp_die' ) ) {
+	function wp_die( $message = '', $title = '', $args = array() ) {
+		throw new QTX_WP_Die_Stub_Exception( is_string( $message ) ? $message : 'wp_die' );
+	}
+}
+
+if ( ! function_exists( 'current_user_can' ) ) {
+	function current_user_can( $capability, ...$args ) {
+		$override = $GLOBALS['qtx_wp_current_user_can'] ?? true;
+
+		if ( is_array( $override ) ) {
+			return (bool) ( $override[ $capability ] ?? true );
+		}
+
+		return (bool) $override;
+	}
+}
+
+if ( ! function_exists( 'add_management_page' ) ) {
+	function add_management_page( $page_title, $menu_title, $capability, $menu_slug, $callback = '' ) {
+		if ( ! isset( $GLOBALS['qtx_wp_admin_pages'] ) || ! is_array( $GLOBALS['qtx_wp_admin_pages'] ) ) {
+			$GLOBALS['qtx_wp_admin_pages'] = array();
+		}
+
+		$GLOBALS['qtx_wp_admin_pages'][] = array(
+			'page_title' => $page_title,
+			'menu_title' => $menu_title,
+			'capability' => $capability,
+			'menu_slug'  => $menu_slug,
+			'callback'   => $callback,
+		);
+
+		return 'tools_page_' . $menu_slug;
+	}
+}
+
+if ( ! function_exists( 'wp_safe_redirect' ) ) {
+	function wp_safe_redirect( $location, $status = 302 ) {
+		if ( ! isset( $GLOBALS['qtx_wp_redirects'] ) || ! is_array( $GLOBALS['qtx_wp_redirects'] ) ) {
+			$GLOBALS['qtx_wp_redirects'] = array();
+		}
+
+		$GLOBALS['qtx_wp_redirects'][] = array(
+			'location' => $location,
+			'status'   => $status,
+		);
+
+		return true;
 	}
 }
 
