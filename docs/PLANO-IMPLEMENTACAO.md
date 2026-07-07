@@ -58,11 +58,11 @@ Duas branches partem de `master` (`27b80c9`): a chore (extração do migrator) e
 
 ## Fase 5 — Testes do migrator
 
-- [ ] **5.1** Substituir o teste unitário tautológico `tests/QTX_Polylang_Migration_Test.php` por testes reais das funções puras (`qtxpm_split_multilingual_text`, `qtxpm_normalize_language_code`, `qtxpm_get_language_value`, `qtxpm_sort_items_by_hierarchy`)
+- [x] **5.1** Substituir o teste unitário tautológico `tests/QTX_Polylang_Migration_Test.php` por testes reais das funções puras (`qtxpm_split_multilingual_text`, `qtxpm_normalize_language_code`, `qtxpm_get_language_value`, `qtxpm_sort_items_by_hierarchy`) ✅ 2026-07-07 (36 testes reais, cobrindo os 14 casos canônicos; verificação por mutação manual confirmada)
   - Agente: **testador** (skills `run-tests`, `multilingual-test-fixtures`) · Pronto quando: testes carregam código real do migrator e falham se a lógica for quebrada de propósito (verificação por mutação manual).
-- [ ] **5.2** Criar fixtures WXR versionadas em `tests/fixtures/` — **anonimizadas** a partir do export real em `qtx-polylang-migrator/tmp/` (dados da UENF: NÃO commitá-los crus)
+- [x] **5.2** Criar fixtures WXR versionadas em `tests/fixtures/` — **anonimizadas** a partir do export real em `qtx-polylang-migrator/tmp/` (dados da UENF: NÃO commitá-los crus) ✅ 2026-07-07 (`tests/fixtures/sample-multilingual-wxr.xml`, 100% fictício; consumido por `tests/integration/QTX_WXR_Fixture_Integration_Test.php`)
   - Agente: **testador** com apoio do **especialista-migracao** (skill `wxr-fixtures`).
-- [ ] **5.3** Cobertura mínima de `admin-actions.php`/`bootstrap.php` (nonce, capability, roteamento de steps, com stubs)
+- [x] **5.3** Cobertura mínima de `admin-actions.php`/`bootstrap.php` (nonce, capability, roteamento de steps, com stubs) ✅ 2026-07-07 (`tests/integration/QTX_Polylang_Migrator_Admin_Actions_Test.php`; stubs de `current_user_can`/`wp_die`/`wp_safe_redirect`/`add_management_page`/`wp_unslash` adicionados a `tests/wordpress_stubs.php`)
   - Agente: **testador**.
 
 ## Fase 6 — Segurança
@@ -102,7 +102,7 @@ Fase 0 (hoje) → Fase 1 → Fase 2 → Fase 3 ─┬→ Fase 7
 |---|---|---|
 | Perda dos commits locais (crítico) | Fase 0.1 | ✅ mitigado 2026-07-07 (branch no origin) |
 | Conflito `.claude/` entre branches | Fase 2.2–2.3 | ✅ resolvido 2026-07-07 (renomeação commitada em `6ecf65f`, PR #2 mergeado em `master` @ `371d90c`, PR #1 fechado como superado) |
-| Vazamento de dados reais da UENF (WXR em tmp/) | Fase 5.2 (anonimizar) | ⏳ aberto |
+| Vazamento de dados reais da UENF (WXR em tmp/) | Fase 5.2 (anonimizar) | ✅ mitigado 2026-07-07 (fixture 100% fictícia criada; tmp/ não commitado) |
 | Release com docs enganosas | Fase 3 antes da 7 | ✅ mitigado 2026-07-07 (CHANGELOG/README/readme.txt/docs sincronizados; versão 3.17.0) |
-| Falsa cobertura do teste unitário | Fase 5.1 | ⏳ aberto |
+| Falsa cobertura do teste unitário | Fase 5.1 | ✅ resolvido 2026-07-07 |
 | Scripts órfãos inseguros commitados por engano | Fase 4.1–4.2 | ✅ resolvido (scripts removidos do disco) |
