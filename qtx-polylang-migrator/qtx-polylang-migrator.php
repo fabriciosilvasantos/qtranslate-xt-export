@@ -5,7 +5,7 @@
  * Description: Standalone migration tools to convert qTranslate-formatted WXR exports into a Polylang-ready WordPress import flow.
  * Version: 0.1.0
  * Requires at least: 6.9.4
- * Tested up to: 6.9.4
+ * Tested up to: 7.0
  * Requires PHP: 8.4
  * Requires Plugins: polylang
  * Author: qTranslate Community
