@@ -12,8 +12,13 @@ function qtranxf_localeForCurrentLanguage( string $locale ): string {
 		return $locale_lang;
 	}
 	global $q_config;
-	$lang        = $q_config['language'];
-	$locale_lang = $q_config['locale'][ $lang ];
+	$lang = $q_config['language'];
+	// The language may not be enabled (no locale configured), e.g. when set
+	// through a filter — fall back to the language code instead of crashing.
+	$locale_lang = $q_config['locale'][ $lang ] ?? '';
+	if ( '' === (string) $locale_lang ) {
+		$locale_lang = $lang;
+	}
 
 	// submit a few possible locales
 	$lc             = array();

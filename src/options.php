@@ -403,6 +403,46 @@ function qtranxf_load_option_flag_location( string $nm ): void {
 	}
 }
 
+/**
+ * Ensure 'default_language' and 'enabled_languages' are mutually consistent.
+ *
+ * These options can be modified outside the admin UI (WP-CLI, direct database
+ * edits, other plugins, partial restores). An inconsistent state used to take
+ * the whole site down later, when the locale of a non-enabled language was
+ * requested (see qtranxf_localeForCurrentLanguage).
+ * The normalization is runtime-only: the stored options are left untouched.
+ */
+function qtranxf_ensure_language_config_consistency(): void {
+	global $q_config;
+
+	$enabled_languages = $q_config['enabled_languages'] ?? null;
+	if ( ! is_array( $enabled_languages ) ) {
+		$enabled_languages = array();
+	}
+	$enabled_languages = array_values( array_filter( $enabled_languages, 'is_string' ) );
+
+	$default_language = $q_config['default_language'] ?? '';
+	if ( ! is_string( $default_language ) ) {
+		$default_language = '';
+	}
+
+	if ( ! in_array( $default_language, $enabled_languages, true ) ) {
+		$known_languages = qtranxf_default_language_name();
+		if ( '' !== $default_language && isset( $known_languages[ $default_language ] ) ) {
+			// Preserve the configured default by enabling it back.
+			$enabled_languages[] = $default_language;
+		} elseif ( ! empty( $enabled_languages ) ) {
+			$default_language = $enabled_languages[0];
+		} else {
+			$default_language    = 'en';
+			$enabled_languages[] = 'en';
+		}
+	}
+
+	$q_config['default_language']  = $default_language;
+	$q_config['enabled_languages'] = $enabled_languages;
+}
+
 function qtranxf_load_config(): void {
 	global $qtranslate_options, $q_config;
 	qtranxf_set_default_options( $qtranslate_options );
@@ -411,6 +451,7 @@ function qtranxf_load_config(): void {
 
 	qtranxf_load_option_func( 'default_language' );
 	qtranxf_load_option_array( 'enabled_languages' );
+	qtranxf_ensure_language_config_consistency();
 
 	qtranxf_load_option_flag_location( 'flag_location' );
 	qtranxf_load_languages_enabled();
