@@ -1140,4 +1140,208 @@ XML;
 			$wpdb = $original_wpdb;
 		}
 	}
+
+	public function test_migration_run_context_round_trip(): void {
+		$this->assertSame( array( 'run' => '', 'source' => '' ), qtxpm_get_current_migration_run() );
+
+		qtxpm_set_current_migration_run( 'run-abc', 'https://site-a.example' );
+
+		$this->assertSame(
+			array(
+				'run'    => 'run-abc',
+				'source' => 'https://site-a.example',
+			),
+			qtxpm_get_current_migration_run()
+		);
+	}
+
+	public function test_wxr_source_key_extraction_normalizes_channel_link(): void {
+		$xml = simplexml_load_string(
+			'<rss><channel><title>Site A</title><link>https://Site-A.example/Blog/</link></channel></rss>'
+		);
+
+		$this->assertSame( 'https://site-a.example/blog', qtxpm_get_wxr_source_key( $xml ) );
+	}
+
+	public function test_wxr_source_key_falls_back_to_channel_title(): void {
+		$xml = simplexml_load_string(
+			'<rss><channel><title>Meu Site</title><link></link></channel></rss>'
+		);
+
+		$this->assertSame( 'meu site', qtxpm_get_wxr_source_key( $xml ) );
+	}
+
+	public function test_direct_import_records_run_context_and_tags_posts(): void {
+		$xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<title>Site A</title>
+	<link>https://site-a.example</link>
+	<item>
+		<title>Pagina</title>
+		<guid isPermaLink="false">pagina</guid>
+		<content:encoded><![CDATA[Conteudo]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="language" nicename="pt">pt</category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[pagina]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$temp_file = tempnam( sys_get_temp_dir(), 'qtx-wxr-' );
+		file_put_contents( $temp_file, $xml );
+
+		try {
+			$result = qtxpm_direct_xml_import( $temp_file, true );
+
+			$this->assertTrue( $result['success'] );
+
+			$run_context = qtxpm_get_current_migration_run();
+			$this->assertNotSame( '', $run_context['run'] );
+			$this->assertSame( 'https://site-a.example', $run_context['source'] );
+
+			$post_meta = $GLOBALS['qtx_wp_post_meta'][1] ?? array();
+			$this->assertSame( $run_context['run'], $post_meta['_pll_migration_run'] ?? null );
+			$this->assertSame( 'https://site-a.example', $post_meta['_pll_migration_source'] ?? null );
+		} finally {
+			@unlink( $temp_file );
+		}
+	}
+
+	public function test_hierarchy_query_is_scoped_to_current_run(): void {
+		global $wpdb;
+
+		qtxpm_set_current_migration_run( 'run-scope-1', 'https://site-a.example' );
+
+		$original_wpdb = $wpdb;
+		$wpdb = new class() extends wpdb {
+			public $captured_queries = array();
+
+			public function get_results( $query, $output = OBJECT ) {
+				$this->captured_queries[] = $query;
+				return array();
+			}
+		};
+
+		try {
+			qtxpm_rebuild_hierarchy_process();
+
+			$this->assertNotEmpty( $wpdb->captured_queries );
+			$this->assertStringContainsString( '_pll_migration_run', $wpdb->captured_queries[0] );
+			$this->assertStringContainsString( 'run-scope-1', $wpdb->captured_queries[0] );
+		} finally {
+			$wpdb = $original_wpdb;
+		}
+	}
+
+	public function test_hierarchy_query_is_unscoped_without_run_context(): void {
+		global $wpdb;
+
+		$original_wpdb = $wpdb;
+		$wpdb = new class() extends wpdb {
+			public $captured_queries = array();
+
+			public function get_results( $query, $output = OBJECT ) {
+				$this->captured_queries[] = $query;
+				return array();
+			}
+		};
+
+		try {
+			qtxpm_rebuild_hierarchy_process();
+
+			$this->assertNotEmpty( $wpdb->captured_queries );
+			$this->assertStringNotContainsString( '_pll_migration_run', $wpdb->captured_queries[0] );
+		} finally {
+			$wpdb = $original_wpdb;
+		}
+	}
+
+	public function test_dedup_query_is_scoped_to_current_source(): void {
+		global $wpdb;
+
+		qtxpm_set_current_migration_run( 'run-scope-2', 'https://site-a.example' );
+
+		$original_wpdb = $wpdb;
+		$wpdb = new class() extends wpdb {
+			public $captured_queries = array();
+
+			public function get_results( $query, $output = OBJECT ) {
+				$this->captured_queries[] = $query;
+				return array();
+			}
+		};
+
+		try {
+			qtxpm_deduplicate_translation_posts_process();
+
+			$this->assertNotEmpty( $wpdb->captured_queries );
+			$this->assertStringContainsString( '_pll_migration_source', $wpdb->captured_queries[0] );
+			$this->assertStringContainsString( 'https://site-a.example', $wpdb->captured_queries[0] );
+		} finally {
+			$wpdb = $original_wpdb;
+		}
+	}
+
+	public function test_connect_translations_scopes_group_and_language_queries_to_run(): void {
+		global $wpdb;
+
+		qtxpm_set_current_migration_run( 'run-scope-3', 'https://site-a.example' );
+
+		$original_wpdb = $wpdb;
+		$wpdb = new class() extends wpdb {
+			public $captured_queries = array();
+
+			public function get_results( $query, $output = OBJECT ) {
+				$this->captured_queries[] = $query;
+				return array();
+			}
+		};
+
+		try {
+			$result = qtxpm_connect_translations_process();
+
+			$this->assertTrue( $result['success'] );
+
+			$group_queries = array_values(
+				array_filter(
+					$wpdb->captured_queries,
+					static function ( $query ) {
+						return false !== strpos( $query, '_pll_migration_group' );
+					}
+				)
+			);
+			$this->assertNotEmpty( $group_queries );
+			$this->assertStringContainsString( '_pll_migration_run', $group_queries[0] );
+			$this->assertStringContainsString( 'run-scope-3', $group_queries[0] );
+
+			$language_queries = array_values(
+				array_filter(
+					$wpdb->captured_queries,
+					static function ( $query ) {
+						return false !== strpos( $query, "pm.meta_key = '_pll_migration_lang'" )
+							&& false === strpos( $query, '_pll_migration_group' );
+					}
+				)
+			);
+			$this->assertNotEmpty( $language_queries );
+			$this->assertStringContainsString( 'run-scope-3', $language_queries[0] );
+		} finally {
+			$wpdb = $original_wpdb;
+		}
+	}
 }

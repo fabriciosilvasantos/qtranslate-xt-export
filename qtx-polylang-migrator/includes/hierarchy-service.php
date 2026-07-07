@@ -18,13 +18,15 @@ function qtxpm_rebuild_hierarchy_process() {
 	);
 
 	try {
+		$run_scope_join = qtxpm_get_migration_run_scope_join();
+
 		$posts = $wpdb->get_results(
 			"SELECT p.ID, p.post_type, p.menu_order,
 				pm_original.meta_value as original_id,
 				pm_parent.meta_value as original_parent_id,
 				pm_lang.meta_value as lang
 			FROM {$wpdb->posts} p
-			INNER JOIN {$wpdb->postmeta} pm_original ON p.ID = pm_original.post_id AND pm_original.meta_key = '_pll_migration_original_id'
+			INNER JOIN {$wpdb->postmeta} pm_original ON p.ID = pm_original.post_id AND pm_original.meta_key = '_pll_migration_original_id'{$run_scope_join}
 			LEFT JOIN {$wpdb->postmeta} pm_parent ON p.ID = pm_parent.post_id AND pm_parent.meta_key = '_pll_migration_parent_id'
 			LEFT JOIN {$wpdb->postmeta} pm_lang ON p.ID = pm_lang.post_id AND pm_lang.meta_key = '_pll_migration_lang'
 			WHERE pm_original.meta_value IS NOT NULL
@@ -48,7 +50,7 @@ function qtxpm_rebuild_hierarchy_process() {
 				pm_parent.meta_value as original_parent_id,
 				pm_lang.meta_value as lang
 			FROM {$wpdb->posts} p
-			INNER JOIN {$wpdb->postmeta} pm_original ON p.ID = pm_original.post_id AND pm_original.meta_key = '_pll_migration_original_id'
+			INNER JOIN {$wpdb->postmeta} pm_original ON p.ID = pm_original.post_id AND pm_original.meta_key = '_pll_migration_original_id'{$run_scope_join}
 			INNER JOIN {$wpdb->postmeta} pm_parent ON p.ID = pm_parent.post_id AND pm_parent.meta_key = '_pll_migration_parent_id'
 			LEFT JOIN {$wpdb->postmeta} pm_lang ON p.ID = pm_lang.post_id AND pm_lang.meta_key = '_pll_migration_lang'
 			WHERE pm_parent.meta_value IS NOT NULL

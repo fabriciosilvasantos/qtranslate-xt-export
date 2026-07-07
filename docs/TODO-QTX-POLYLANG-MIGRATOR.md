@@ -92,9 +92,28 @@ Entregas:
 
 ### 6. Bug: contaminação de metadados entre execuções de migração
 
-Status: aberto
+Status: corrigido (2026-07-07)
 
-Contexto (encontrado em teste E2E de 2026-07-07, WordPress 7.0):
+Correção implementada:
+
+- cada importação registra um contexto de execução (`run` + `source`) na opção
+  `qtxpm_current_migration_run` e etiqueta os posts importados com
+  `_pll_migration_run` e `_pll_migration_source`
+- hierarquia, restauração de idiomas e conexão de traduções passam a ser
+  escopadas à execução corrente
+- a deduplicação passa a ser escopada ao site de origem corrente (duplicatas
+  só fazem sentido dentro do mesmo site — IDs originais colidem entre sites)
+- sem contexto registrado (migrações feitas antes da correção), todas as
+  consultas mantêm o comportamento legado (sem escopo)
+- validado por 8 novos testes de integração e por re-execução do cenário E2E
+  que originou o bug (hierarquia correta, 3 pares conectados, migração
+  anterior intacta)
+
+Limitação conhecida: um force re-import sobre uma migração feita ANTES da
+correção não deduplica contra os posts antigos (eles não têm
+`_pll_migration_source`).
+
+Contexto original (encontrado em teste E2E de 2026-07-07, WordPress 7.0):
 
 Ao rodar uma segunda migração em um site de destino que já recebeu uma migração
 anterior, os metadados `_pll_migration_original_id` / `_pll_migration_parent_id` /

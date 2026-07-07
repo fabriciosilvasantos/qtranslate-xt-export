@@ -44,6 +44,10 @@ function qtxpm_direct_xml_import( $xml_file, $force_import = false ) {
 			throw new Exception( __( 'Estrutura XML invalida. Faltando channel/item.', 'qtx-polylang-migrator' ) );
 		}
 
+		$migration_run_id = qtxpm_generate_migration_run_id();
+		$migration_source_key = qtxpm_get_wxr_source_key( $xml );
+		qtxpm_set_current_migration_run( $migration_run_id, $migration_source_key );
+
 		$namespaces = $xml->getNamespaces( true );
 		$imported_count = 0;
 		$skipped_count = 0;
@@ -152,6 +156,10 @@ function qtxpm_direct_xml_import( $xml_file, $force_import = false ) {
 					}
 					update_post_meta( $post_id, '_pll_migration_parent_id', $original_post_parent );
 					update_post_meta( $post_id, '_pll_migration_menu_order', $original_menu_order );
+					update_post_meta( $post_id, '_pll_migration_run', $migration_run_id );
+					if ( '' !== $migration_source_key ) {
+						update_post_meta( $post_id, '_pll_migration_source', $migration_source_key );
+					}
 
 					foreach ( $item->category as $category ) {
 						$domain = (string) $category['domain'];

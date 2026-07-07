@@ -139,6 +139,7 @@ function qtxpm_deduplicate_translation_posts_process(): array {
 	);
 
 	$duplicate_marker_key = qtxpm_get_duplicate_marker_meta_key();
+	$source_scope_join = qtxpm_get_migration_source_scope_join();
 	$candidates = $wpdb->get_results(
 		"
 		SELECT p.ID, p.post_type, p.post_status, p.post_name,
@@ -151,7 +152,7 @@ function qtxpm_deduplicate_translation_posts_process(): array {
 		FROM {$wpdb->posts} p
 		INNER JOIN {$wpdb->postmeta} pm_original
 			ON p.ID = pm_original.post_id
-			AND pm_original.meta_key = '_pll_migration_original_id'
+			AND pm_original.meta_key = '_pll_migration_original_id'{$source_scope_join}
 		INNER JOIN {$wpdb->postmeta} pm_lang
 			ON p.ID = pm_lang.post_id
 			AND pm_lang.meta_key = '_pll_migration_lang'
@@ -298,11 +299,24 @@ function qtxpm_restore_post_languages( array $excluded_post_ids = array() ): arr
 		return $result;
 	}
 
-	$posts_with_lang = $wpdb->get_results(
-		"SELECT post_id, meta_value as language_code
-		FROM {$wpdb->postmeta}
-		WHERE meta_key = '_pll_migration_lang'"
-	);
+	$current_run_id = qtxpm_get_current_migration_run()['run'];
+	if ( '' !== $current_run_id ) {
+		$posts_with_lang = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT pm.post_id, pm.meta_value as language_code
+				FROM {$wpdb->postmeta} pm
+				INNER JOIN {$wpdb->postmeta} pm_run ON pm.post_id = pm_run.post_id AND pm_run.meta_key = '_pll_migration_run' AND pm_run.meta_value = %s
+				WHERE pm.meta_key = '_pll_migration_lang'",
+				$current_run_id
+			)
+		);
+	} else {
+		$posts_with_lang = $wpdb->get_results(
+			"SELECT post_id, meta_value as language_code
+			FROM {$wpdb->postmeta}
+			WHERE meta_key = '_pll_migration_lang'"
+		);
+	}
 
 	$excluded_post_ids = array_map( 'intval', $excluded_post_ids );
 	$excluded_lookup = array_flip( array_values( array_unique( array_filter( $excluded_post_ids ) ) ) );
@@ -364,11 +378,12 @@ function qtxpm_connect_translations_process() {
 		$language_restore = qtxpm_restore_post_languages( (array) ( $deduplication_result['excluded_post_ids'] ?? array() ) );
 		$result['details'][] = $language_restore['message'];
 
+		$run_scope_join = qtxpm_get_migration_run_scope_join();
 		$posts = $wpdb->get_results(
 			"SELECT p.ID, p.post_type, pm.meta_value as group_id, pm2.meta_value as lang
 			FROM {$wpdb->posts} p
 			INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id
-			INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id
+			INNER JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id{$run_scope_join}
 			WHERE pm.meta_key = '_pll_migration_group'
 			AND pm2.meta_key = '_pll_migration_lang'
 			AND p.post_status NOT IN ('trash', 'auto-draft')"

@@ -147,6 +147,125 @@ function qtxpm_get_migration_transient_key( string $suffix ): string {
 }
 
 /**
+ * Return the option name that stores the current migration run context.
+ *
+ * @return string
+ */
+function qtxpm_get_migration_run_option_name(): string {
+	return 'qtxpm_current_migration_run';
+}
+
+/**
+ * Generate a unique identifier for a migration run.
+ *
+ * @return string
+ */
+function qtxpm_generate_migration_run_id(): string {
+	return uniqid( 'qtxpm-', true );
+}
+
+/**
+ * Persist the current migration run context (run ID and source key).
+ *
+ * The context scopes the hierarchy/connection queries to the latest import
+ * and prevents `_pll_migration_*` metadata from previous migrations of other
+ * sites from contaminating a new run.
+ *
+ * @param string $run_id Unique run identifier.
+ * @param string $source_key Normalized identifier of the source site.
+ * @return void
+ */
+function qtxpm_set_current_migration_run( string $run_id, string $source_key ): void {
+	update_option(
+		qtxpm_get_migration_run_option_name(),
+		array(
+			'run'    => $run_id,
+			'source' => $source_key,
+		),
+		false
+	);
+}
+
+/**
+ * Return the current migration run context.
+ *
+ * @return array{run: string, source: string}
+ */
+function qtxpm_get_current_migration_run(): array {
+	$value = get_option( qtxpm_get_migration_run_option_name(), array() );
+
+	return array(
+		'run'    => is_array( $value ) && isset( $value['run'] ) ? (string) $value['run'] : '',
+		'source' => is_array( $value ) && isset( $value['source'] ) ? (string) $value['source'] : '',
+	);
+}
+
+/**
+ * Build an SQL INNER JOIN fragment scoping posts (aliased `p`) to the current run.
+ *
+ * Returns an empty string when no run is recorded, preserving the legacy
+ * (unscoped) behavior for migrations imported before run tracking existed.
+ *
+ * @return string
+ */
+function qtxpm_get_migration_run_scope_join(): string {
+	global $wpdb;
+
+	$run_id = qtxpm_get_current_migration_run()['run'];
+	if ( '' === $run_id || ! isset( $wpdb ) ) {
+		return '';
+	}
+
+	return $wpdb->prepare(
+		" INNER JOIN {$wpdb->postmeta} pm_run ON p.ID = pm_run.post_id AND pm_run.meta_key = '_pll_migration_run' AND pm_run.meta_value = %s",
+		$run_id
+	);
+}
+
+/**
+ * Build an SQL INNER JOIN fragment scoping posts (aliased `p`) to the current source site.
+ *
+ * Used by deduplication: duplicates are only meaningful among posts that came
+ * from the same source site (original IDs collide across different sites).
+ * Returns an empty string when no source is recorded (legacy behavior).
+ *
+ * @return string
+ */
+function qtxpm_get_migration_source_scope_join(): string {
+	global $wpdb;
+
+	$source_key = qtxpm_get_current_migration_run()['source'];
+	if ( '' === $source_key || ! isset( $wpdb ) ) {
+		return '';
+	}
+
+	return $wpdb->prepare(
+		" INNER JOIN {$wpdb->postmeta} pm_source ON p.ID = pm_source.post_id AND pm_source.meta_key = '_pll_migration_source' AND pm_source.meta_value = %s",
+		$source_key
+	);
+}
+
+/**
+ * Extract a normalized source-site key from a loaded WXR document.
+ *
+ * @param SimpleXMLElement $xml Loaded WXR document.
+ * @return string
+ */
+function qtxpm_get_wxr_source_key( SimpleXMLElement $xml ): string {
+	$source = '';
+
+	if ( isset( $xml->channel->link ) ) {
+		$source = (string) $xml->channel->link;
+	}
+
+	if ( '' === trim( $source ) && isset( $xml->channel->title ) ) {
+		$source = (string) $xml->channel->title;
+	}
+
+	return strtolower( untrailingslashit( trim( $source ) ) );
+}
+
+/**
  * Return the standalone migration menu/page labels.
  *
  * @return array{page_title: string, menu_title: string}

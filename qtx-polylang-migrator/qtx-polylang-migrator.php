@@ -51,6 +51,7 @@ function qtxpm_uninstall(): void {
 	delete_transient( QTXPM_MIGRATION_TRANSIENT_PREFIX . 'staged_xml' );
 	delete_transient( QTXPM_MIGRATION_TRANSIENT_PREFIX . 'import_report' );
 	delete_transient( QTXPM_MIGRATION_TRANSIENT_PREFIX . 'migration_results' );
+	delete_option( 'qtxpm_current_migration_run' );
 }
 
 add_action( 'init', 'qtxpm_load_textdomain' );
