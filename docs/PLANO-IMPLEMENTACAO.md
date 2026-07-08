@@ -71,16 +71,13 @@ Duas branches partem de `master` (`27b80c9`): a chore (extração do migrator) e
   - Correções (**especialista-migracao**, commit `1b2cdad`): capability + nonces por operação + `wp_check_filetype`/`QTXPM_MAX_UPLOAD_BYTES` (50MB filtrável) + uninstall consolidado + `sanitize_key` + restauração libxml + `LIBXML_NONET`.
   - Re-revisão: **APTO para merge** — todos corrigidos, sem regressões. Follow-up não bloqueante registrado (restaurar `libxml_use_internal_errors` também em `qtxpm_direct_xml_import`, `xml-import-service.php:29`).
 
-## Fase 7 — Release
+## Fase 7 — Release ✅ concluída 2026-07-07
 
-- [ ] **7.1** Seguir a skill `release-process` de ponta a ponta (versões já sincronizadas na Fase 3)
-  - Agente: **gerente**.
-- [ ] **7.2** `./run-tests.sh all` final verde após todas as fases
-  - Agente: **gerente**.
-- [ ] **7.3** `./run-tests.sh package-migrator` e conferência do zip (`build/qtx-polylang-migrator-<versão>.zip`); avaliar bump do migrator (0.1.0 → 0.2.0 se as Fases 4–6 alterarem comportamento)
-  - Agente: **gerente** + **documentador**.
-- [ ] 🔐 **7.4** Tag anotada, push da tag e release no GitHub com o zip anexado
-  - Agente: **gerente** · Somente com aprovação explícita.
+- [x] **7.1** Skill `release-process` seguida de ponta a ponta ✅ (raiz 3.17.0; migrator bumpado 0.1.0 → 0.2.0 via PR #4 por mudança de comportamento nas Fases 4–6).
+- [x] **7.2** Gate final verde ✅ — unitário `OK (58/79)` · integração `OK (71/199)` · PHPStan `[OK] No errors` · PHPCS 69 arquivos limpos (PHP 8.4.18).
+- [x] **7.3** Pacote gerado e conferido ✅ — `qtx-polylang-migrator-0.2.0.zip` (33 KB): `Version: 0.2.0` no header interno, sem `tmp/` e sem XML de dados reais.
+- [x] 🔐 **7.4** Tag `v3.17.0` anotada e enviada (@ `2e74f16`); release publicado com o zip anexado ✅ (autorizado pelo usuário)
+  - https://github.com/fabriciosilvasantos/qtranslate-xt-export/releases/tag/v3.17.0
 
 ## Pendência de longo prazo (sem fase)
 
