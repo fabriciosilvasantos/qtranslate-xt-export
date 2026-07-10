@@ -163,6 +163,27 @@ No ambiente local de desenvolvimento, o `docker-compose` também passou a expor 
 
 Depois do ajuste do ambiente, essa validação também foi repetida com sucesso após a recriação limpa do serviço WordPress, confirmando o carregamento operacional do admin do migrador no cenário standalone local.
 
+### Smoke test end-to-end com dado real (2026-07-08)
+
+Além do smoke test inicial de renderização, foi executado um smoke test completo do pipeline (transformação → importação → hierarquia → conexão de traduções → verificação de duplicatas) usando um WXR real, não sintético, sob:
+
+- WordPress `7.0`
+- Polylang `3.8.5`
+- ambiente Docker do projeto
+
+Dados de entrada: export WXR de 4,5 MB do site da Pós-Graduação em Sociologia Política (UENF), contendo conteúdo qTranslate real em produção.
+
+Resultados:
+
+- pipeline completo migrou **1.660 itens em 94s**, com **zero erros**
+- **177 páginas com idioma** foram criadas (106 em `pt`, 71 em `en`)
+- **71 pares de tradução** conectados corretamente pela API do Polylang
+- hierarquia de páginas: **179/179 arestas pai→filho corretas** quando comparadas ao WXR original
+- URLs: **86/87 URLs idênticas** às do site real de origem — a única divergência encontrada foi a página inicial estática (ver seção "Após a migração" no `readme.txt` do plugin, que documenta que essa opção não é transportada pelo WXR)
+- deduplicação: **179 grupos analisados, 0 duplicatas** rebaixadas (destino estava limpo)
+
+Esse smoke test confirma, com dado real de grande porte, que o pipeline de migração é funcionalmente correto em destino limpo. Ele também expôs lacunas que o WXR não cobre por natureza (menus, página inicial, tema/Customizer/widgets, anexos com URL de origem) — essas lacunas foram documentadas como passos manuais de pós-migração no `readme.txt` do plugin standalone.
+
 Além disso, o repositório passou a ter um fluxo reproduzível de empacotamento do plugin standalone, com geração de ZIP distribuível a partir do diretório `qtx-polylang-migrator/`.
 
 Também foram gerados e versionados arquivos reais de tradução do plugin standalone em `languages/`, incluindo catálogo `.pot`, catálogo `.po` e arquivo compilado `.mo`, todos associados ao text domain `qtx-polylang-migrator`.

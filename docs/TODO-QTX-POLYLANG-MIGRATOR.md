@@ -149,3 +149,15 @@ fluxo real — simplificar a UI ou documentar.
   qTranslate-XT 3.16.2 em WP 7.0 → migrator em WP 7.0 + Polylang 3.8.5).
   Em destino limpo o fluxo é íntegro; o bug do item 6 afeta apenas
   re-execuções em destino já migrado.
+- 2026-07-08: smoke test end-to-end com WXR real (4,5 MB, site da
+  Pós-Graduação em Sociologia Política/UENF) sob WordPress 7.0 + Polylang
+  3.8.5. Pipeline completo (transformar → importar → hierarquia → conexões)
+  migrou 1.660 itens em 94s com zero erros: 177 páginas com idioma
+  (106 pt + 71 en), 71 pares de tradução conectados, hierarquia 179/179
+  arestas pai→filho corretas contra o WXR original, 86/87 URLs idênticas às
+  do site real (única diferença: a página inicial estática, que o WXR não
+  transporta — ver item de pós-migração no `readme.txt` do plugin) e
+  deduplicação 179 grupos analisados / 0 duplicatas. Confirma o item 7
+  (o fluxo "Importar para WordPress" já executa a migração completa) e não
+  afeta o bug do item 6, que só aparece em re-execuções sobre destino já
+  migrado.
