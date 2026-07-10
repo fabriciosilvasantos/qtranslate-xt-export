@@ -19,6 +19,11 @@ function qtxpm_handle_import_process(): void {
 		qtxpm_process_wordpress_import();
 	}
 
+	// `qtxpm_migration_action_finalize` is intentionally kept for backward
+	// compatibility (e.g. bookmarked forms, external automation) even though
+	// no UI button posts it anymore: qtxpm_process_wordpress_import() already
+	// runs hierarchy rebuild + translation connection as part of a single
+	// chained pipeline before redirecting straight to the results step.
 	if ( qtxpm_is_finalize_request() ) {
 		qtxpm_finalize_migration();
 	}
