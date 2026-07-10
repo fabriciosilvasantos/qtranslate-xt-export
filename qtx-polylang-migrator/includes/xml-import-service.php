@@ -8,9 +8,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * @param string $xml_file Path to processed XML file.
  * @param bool   $force_import Whether to ignore pre-existing posts.
+ * @param bool   $allow_raw Whether to allow importing content that still
+ *                          contains untransformed qTranslate language blocks
+ *                          (`[:xx]`, `<!--:xx-->`, `{:xx}`). Defaults to
+ *                          false so raw content is rejected up front instead
+ *                          of being imported verbatim into post titles/content.
  * @return array<string, mixed>
  */
-function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false ): array {
+function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, bool $allow_raw = false ): array {
 	global $wpdb;
 
 	$result = array(
@@ -21,12 +26,13 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false )
 		'errors'   => array(),
 	);
 
+	$previous_libxml_errors = libxml_use_internal_errors( true );
+
 	try {
 		if ( ! file_exists( $xml_file ) || ! is_readable( $xml_file ) ) {
 			throw new Exception( __( 'Arquivo XML nao encontrado ou nao legivel.', 'qtx-polylang-migrator' ) );
 		}
 
-		libxml_use_internal_errors( true );
 		$xml = simplexml_load_file( $xml_file, 'SimpleXMLElement', LIBXML_NONET );
 
 		if ( ! $xml ) {
@@ -42,6 +48,12 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false )
 
 		if ( ! isset( $xml->channel ) || ! isset( $xml->channel->item ) ) {
 			throw new Exception( __( 'Estrutura XML invalida. Faltando channel/item.', 'qtx-polylang-migrator' ) );
+		}
+
+		if ( ! $allow_raw && qtxpm_wxr_has_raw_multilingual_blocks( $xml ) ) {
+			throw new Exception(
+				__( 'O XML contem blocos de idioma do qTranslate ainda nao transformados (ex.: [:xx], <!--:xx--> ou {:xx}). Processe o arquivo pela etapa de upload do migrador (que executa a transformacao) antes de importar, ou use a opcao de importacao avancada para forcar a importacao do conteudo bruto.', 'qtx-polylang-migrator' )
+			);
 		}
 
 		$migration_run_id = qtxpm_generate_migration_run_id();
@@ -224,7 +236,54 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false )
 	} catch ( Exception $e ) {
 		$result['message'] = __( 'Erro na importacao:', 'qtx-polylang-migrator' ) . ' ' . $e->getMessage();
 		$result['success'] = false;
+	} finally {
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_libxml_errors );
 	}
 
 	return $result;
+}
+
+/**
+ * Detect whether a loaded WXR document still contains untransformed
+ * qTranslate-XT language blocks (`[:xx]`, `<!--:xx-->`, `{:xx}`) in item
+ * titles, content, or excerpts.
+ *
+ * Processed WXR content (as produced by `qtxpm_process_wxr_content()`)
+ * never contains these markers, since they are split into per-language
+ * items before import. Their presence indicates the caller skipped the
+ * transformation step and is about to import raw multilingual markup
+ * verbatim into post titles/content.
+ *
+ * @param SimpleXMLElement $xml Loaded WXR document.
+ * @return bool
+ */
+function qtxpm_wxr_has_raw_multilingual_blocks( SimpleXMLElement $xml ): bool {
+	if ( ! isset( $xml->channel->item ) ) {
+		return false;
+	}
+
+	$namespaces = $xml->getNamespaces( true );
+
+	foreach ( $xml->channel->item as $item ) {
+		if ( qtxpm_is_multilingual_text( (string) $item->title ) ) {
+			return true;
+		}
+
+		if ( isset( $namespaces['content'] ) ) {
+			$wp_content = $item->children( $namespaces['content'] );
+			if ( isset( $wp_content->encoded ) && qtxpm_is_multilingual_text( (string) $wp_content->encoded ) ) {
+				return true;
+			}
+		}
+
+		if ( isset( $namespaces['excerpt'] ) ) {
+			$wp_excerpt = $item->children( $namespaces['excerpt'] );
+			if ( isset( $wp_excerpt->encoded ) && qtxpm_is_multilingual_text( (string) $wp_excerpt->encoded ) ) {
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
