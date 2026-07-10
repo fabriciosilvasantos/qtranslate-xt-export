@@ -47,6 +47,33 @@ Sim. Quando o XML traz idiomas válidos ainda não configurados, o migrador tent
 
 O migrador preserva um item canônico e rebaixa duplicatas seguras para `draft`. O fluxo evita exclusão permanente automática.
 
+= Preciso clicar em todos os botões da tela de resultados para concluir a migração? =
+
+Não. O botão **Importar para WordPress** já executa o fluxo completo: importação do XML, reconstrução de hierarquia, conexão de traduções no Polylang e verificação de duplicatas. Os demais botões da tela de resultados (ex.: "Executar Migração Completa") são atalhos redundantes para etapas que já foram executadas automaticamente — não é necessário acioná-los de novo.
+
+== Após a Migração ==
+
+A migração cobre o conteúdo transportável pelo WXR (posts, páginas, termos e as ligações de tradução entre eles), mas **não** cobre tudo que compõe um site WordPress. Depois de rodar o migrador, revise manualmente os itens abaixo no site de destino:
+
+**Menus de navegação**
+
+O WXR contém os itens de menu (`nav_menu_item`) como posts, mas as referências que eles carregam (ID do post/página apontado, idioma, hierarquia do menu) não são remontadas automaticamente pelo migrador. Recrie os menus em `Aparência > Menus` apontando para as páginas já migradas, um menu por idioma conforme a configuração do Polylang.
+
+**Página inicial estática**
+
+A opção de página inicial (`show_on_front` / `page_on_front`) não é migrada. Se o site de origem usava uma página estática como início (ex.: uma página "Apresentação"), configure novamente essa opção em `Configurações > Leitura` no destino — caso contrário a página migrada vira uma página comum, sem o papel de home.
+
+**Tema, Customizer e widgets**
+
+Configurações de tema, opções do Customizer (cores, logotipo, textos de cabeçalho/rodapé) e widgets não fazem parte do WXR e precisam ser reconfigurados manualmente no destino.
+
+**Anexos (mídia)**
+
+Os anexos migrados mantêm as URLs do site de origem (o WXR referencia os arquivos pelo domínio original, não copia os binários). Depois da migração, escolha uma das opções:
+
+- copie os arquivos de `wp-content/uploads/` do site de origem para o destino (ex.: via `rsync`) e rode uma busca e substituição (search-replace) do domínio antigo pelo novo no banco de dados; ou
+- reimporte o mesmo XML usando o importador oficial do WordPress (`Ferramentas > Importar > WordPress`) com a opção **"Download and import file attachments"** marcada, para que os arquivos de mídia sejam baixados e reassociados no destino.
+
 == Changelog ==
 
 = 0.2.0 =
