@@ -4,7 +4,7 @@ Tags: migration, polylang, multilingual, import, qtranslate
 Requires at least: 6.9.4
 Tested up to: 7.0
 Requires PHP: 8.4
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,14 @@ Os anexos migrados mantêm as URLs do site de origem (o WXR referencia os arquiv
 - reimporte o mesmo XML usando o importador oficial do WordPress (`Ferramentas > Importar > WordPress`) com a opção **"Download and import file attachments"** marcada, para que os arquivos de mídia sejam baixados e reassociados no destino.
 
 == Changelog ==
+
+= 0.3.0 =
+
+* Proteção: a importação direta agora rejeita WXR com blocos multilíngues crus (`[:xx]`) não transformados, orientando executar a transformação antes (parâmetro `$allow_raw` disponível para uso avançado).
+* Correção: estado global de `libxml_use_internal_errors` restaurado em todos os caminhos da importação direta, inclusive em falhas de parse.
+* Interface: tela de resultados simplificada — removido o passo redundante "Finalizar Migração" (o pipeline completo já executa na importação); botão de reparo de duplicatas rotulado como opcional.
+* Documentação: nova seção "Após a Migração" (menus, página inicial estática, tema e anexos exigem ação manual pós-WXR) e registro do teste end-to-end com dados reais (1.660 itens, hierarquia 100% preservada).
+* i18n: catálogo `.pot`/`.po` regenerado com as strings das versões 0.2.0 e 0.3.0.
 
 = 0.2.0 =
 
