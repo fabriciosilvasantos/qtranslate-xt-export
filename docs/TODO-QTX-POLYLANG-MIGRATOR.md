@@ -136,12 +136,26 @@ Direções de correção possíveis:
 - e/ou limpar os metadados `_pll_migration_*` ao final de uma migração
   concluída com sucesso
 
-### 7. Observação de UX: fluxo já é encadeado
+### 7. Observação de UX: fluxo já é encadeado — RESOLVIDO (0.3.0)
 
 O passo "Importar para WordPress" já executa a migração completa (hierarquia,
 conexão e dedup) e redireciona para `step=results`. Os botões separados
 "Executar Migracao Completa" sugerem etapas manuais que não existem mais no
 fluxo real — simplificar a UI ou documentar.
+
+**Resolução:** removido o card/passo "Passo 3: Finalizar Migração" (botão
+"Executar Migracao Completa") de `admin-render.php`, já que nenhum link do
+fluxo real navega para `step=finalize` — o passo "Importar para WordPress"
+já dispara hierarquia + conexão automaticamente antes de redirecionar direto
+para `step=results`. O card de progresso e o texto do Passo 2 agora deixam
+explícito que a reconstrução de hierarquia e a conexão de traduções rodam
+automaticamente nesse mesmo passo. O nonce action e o handler
+`qtxpm_migration_action_finalize` / `qtxpm_finalize_migration()` em
+`admin-actions.php` foram mantidos intactos (compatibilidade retroativa /
+uso via POST direto), apenas documentados como não expostos por nenhum botão
+da UI. O botão "Reparar Duplicatas Órfãs" na tela de resultados foi mantido
+(uso legítimo de reexecução manual, ver item 6) e teve o rótulo/descrição
+atualizados para deixar claro que é uma ação opcional.
 
 ### Registro de compatibilidade
 
