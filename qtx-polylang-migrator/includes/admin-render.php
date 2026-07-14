@@ -15,7 +15,7 @@ function qtxpm_render_migration_page(): void {
 	$labels = qtxpm_get_migration_labels();
 
 	if ( 'results' === $current_step ) {
-		delete_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
+		qtxpm_delete_staged_xml();
 		delete_transient( qtxpm_get_migration_transient_key( 'import_report' ) );
 		delete_transient( qtxpm_get_migration_transient_key( 'migration_results' ) );
 	}

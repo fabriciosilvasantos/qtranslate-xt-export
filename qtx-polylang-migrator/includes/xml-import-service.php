@@ -24,6 +24,7 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 		'imported' => 0,
 		'skipped'  => 0,
 		'errors'   => array(),
+		'warnings' => array(),
 	);
 
 	$previous_libxml_errors = libxml_use_internal_errors( true );
@@ -112,6 +113,9 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 				$item_language = qtxpm_get_wxr_item_language( $item );
 				$initial_parent_id = qtxpm_resolve_parent_post_id( $imported_post_map, $original_post_parent, $item_language );
 
+				$creator_login = qtxpm_get_wxr_item_creator( $item );
+				$resolved_author_id = '' !== $creator_login ? qtxpm_resolve_wxr_author_id( $creator_login ) : 0;
+
 				$post_data = array(
 					'post_title'        => (string) $item->title,
 					'post_content'      => (string) $wp_content->encoded,
@@ -127,6 +131,10 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 					'post_modified_gmt' => (string) $wp_data->post_modified_gmt,
 					'guid'              => (string) $item->guid,
 				);
+
+				if ( $resolved_author_id > 0 ) {
+					$post_data['post_author'] = $resolved_author_id;
+				}
 
 				if ( ! $force_import && qtxpm_post_exists_in_import_index( $existing_post_index, $post_data ) ) {
 					$skipped_count++;
@@ -160,6 +168,15 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 							continue;
 						}
 
+						if ( qtxpm_is_serialized_meta_value( $meta_value ) && qtxpm_is_multilingual_text( $meta_value ) ) {
+							$result['warnings'][] = sprintf(
+								__( 'Aviso: o metadado "%1$s" do post "%2$s" (ID %3$d) parece conter dados serializados com marcadores de idioma do qTranslate ainda nao processados; o valor foi importado sem alteracoes.', 'qtx-polylang-migrator' ),
+								$meta_key,
+								$post_data['post_title'],
+								$post_id
+							);
+						}
+
 						update_post_meta( $post_id, $meta_key, $meta_value );
 						$meta_count++;
 					}
@@ -172,6 +189,10 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 					update_post_meta( $post_id, '_pll_migration_run', $migration_run_id );
 					if ( '' !== $migration_source_key ) {
 						update_post_meta( $post_id, '_pll_migration_source', $migration_source_key );
+					}
+
+					if ( '' !== $creator_login && 0 === $resolved_author_id ) {
+						update_post_meta( $post_id, '_pll_migration_original_author', $creator_login );
 					}
 
 					foreach ( $item->category as $category ) {
@@ -241,13 +262,19 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 /**
  * Detect whether a loaded WXR document still contains untransformed
  * qTranslate-XT language blocks (`[:xx]`, `<!--:xx-->`, `{:xx}`) in item
- * titles, content, or excerpts.
+ * titles, content, excerpts, or non-serialized postmeta values.
  *
  * Processed WXR content (as produced by `qtxpm_process_wxr_content()`)
  * never contains these markers, since they are split into per-language
  * items before import. Their presence indicates the caller skipped the
  * transformation step and is about to import raw multilingual markup
- * verbatim into post titles/content.
+ * verbatim into post titles/content/postmeta.
+ *
+ * Serialized postmeta values (PHP `a:`/`O:`/`s:` serialization) are
+ * intentionally excluded: splitting them would corrupt the serialized
+ * structure, so they are left untouched by the transformer and only
+ * surfaced as an import warning (see `qtxpm_direct_xml_import()`), not
+ * as a hard block here.
  *
  * @param SimpleXMLElement $xml Loaded WXR document.
  * @return bool
@@ -277,7 +304,69 @@ function qtxpm_wxr_has_raw_multilingual_blocks( SimpleXMLElement $xml ): bool {
 				return true;
 			}
 		}
+
+		if ( isset( $namespaces['wp'] ) ) {
+			$wp_data = $item->children( $namespaces['wp'] );
+			if ( isset( $wp_data->postmeta ) ) {
+				foreach ( $wp_data->postmeta as $meta ) {
+					$meta_value = (string) $meta->meta_value;
+
+					if ( qtxpm_is_serialized_meta_value( $meta_value ) ) {
+						continue;
+					}
+
+					if ( qtxpm_is_multilingual_text( $meta_value ) ) {
+						return true;
+					}
+				}
+			}
+		}
 	}
 
 	return false;
+}
+
+/**
+ * Read the `dc:creator` (WXR author login) declared for a WXR item.
+ *
+ * @param SimpleXMLElement $item WXR item.
+ * @return string
+ */
+function qtxpm_get_wxr_item_creator( SimpleXMLElement $item ): string {
+	$dc = $item->children( 'http://purl.org/dc/elements/1.1/' );
+
+	if ( ! isset( $dc->creator ) ) {
+		return '';
+	}
+
+	return trim( (string) $dc->creator );
+}
+
+/**
+ * Resolve a WXR `dc:creator` value to an existing WordPress user ID.
+ *
+ * Tries, in order, matching by login, by nicename/slug, and by email,
+ * since different qTranslate exports have been observed to populate
+ * `dc:creator` with any of the three. Returns 0 when no user matches,
+ * in which case the caller preserves the original author login in
+ * `_pll_migration_original_author` post meta for traceability instead
+ * of silently reassigning authorship to the importing user.
+ *
+ * @param string $creator_login `dc:creator` value from the WXR item.
+ * @return int
+ */
+function qtxpm_resolve_wxr_author_id( string $creator_login ): int {
+	if ( '' === $creator_login || ! function_exists( 'get_user_by' ) ) {
+		return 0;
+	}
+
+	foreach ( array( 'login', 'slug', 'email' ) as $field ) {
+		$user = get_user_by( $field, $creator_login );
+
+		if ( $user && isset( $user->ID ) ) {
+			return (int) $user->ID;
+		}
+	}
+
+	return 0;
 }

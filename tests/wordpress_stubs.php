@@ -104,6 +104,55 @@ if ( ! function_exists( 'qtx_wordpress_stub_reset' ) ) {
 		$GLOBALS['qtx_wp_next_term_id'] = 1;
 		$GLOBALS['qtx_wp_term_meta'] = array();
 		$GLOBALS['qtx_wp_object_terms'] = array();
+		$GLOBALS['qtx_wp_users'] = array();
+	}
+}
+
+// ============================================================================
+// USER FUNCTIONS
+// ============================================================================
+
+if ( ! function_exists( 'get_user_by' ) ) {
+	/**
+	 * Minimal `get_user_by()` stub backed by `$GLOBALS['qtx_wp_users']`.
+	 *
+	 * Tests populate `$GLOBALS['qtx_wp_users']` with plain arrays/objects
+	 * containing `ID`, `user_login`, `user_nicename`, and `user_email` to
+	 * simulate existing WordPress users for author-resolution tests.
+	 *
+	 * @param string     $field Field to match: 'id', 'login', 'slug', or 'email'.
+	 * @param int|string $value Value to match against.
+	 * @return object|false
+	 */
+	function get_user_by( $field, $value ) {
+		foreach ( (array) ( $GLOBALS['qtx_wp_users'] ?? array() ) as $user ) {
+			$user_object = (object) $user;
+
+			switch ( $field ) {
+				case 'id':
+					if ( isset( $user_object->ID ) && (int) $user_object->ID === (int) $value ) {
+						return $user_object;
+					}
+					break;
+				case 'login':
+					if ( isset( $user_object->user_login ) && $user_object->user_login === $value ) {
+						return $user_object;
+					}
+					break;
+				case 'slug':
+					if ( isset( $user_object->user_nicename ) && $user_object->user_nicename === $value ) {
+						return $user_object;
+					}
+					break;
+				case 'email':
+					if ( isset( $user_object->user_email ) && $user_object->user_email === $value ) {
+						return $user_object;
+					}
+					break;
+			}
+		}
+
+		return false;
 	}
 }
 
@@ -370,6 +419,13 @@ if ( ! function_exists( 'get_option' ) ) {
 if ( ! function_exists( 'update_option' ) ) {
 	function update_option( $option, $value, $autoload = null ) {
 		$GLOBALS['qtx_wp_options'][ $option ] = $value;
+		return true;
+	}
+}
+
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( $option ) {
+		unset( $GLOBALS['qtx_wp_options'][ $option ] );
 		return true;
 	}
 }

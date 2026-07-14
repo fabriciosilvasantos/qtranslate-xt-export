@@ -114,7 +114,7 @@ function qtxpm_process_uploaded_xml(): void {
 
 	qtxpm_ensure_polylang_languages( $languages, $default_lang );
 	$processed_content = qtxpm_process_wxr_content( $doc, $languages, $default_lang );
-	set_transient( qtxpm_get_migration_transient_key( 'staged_xml' ), $processed_content, 3600 );
+	qtxpm_set_staged_xml( $processed_content, 3600 );
 	qtxpm_redirect_to_step( 'import' );
 }
 
@@ -123,7 +123,7 @@ function qtxpm_process_wordpress_import(): void {
 		wp_die( esc_html__( 'Acesso negado.', 'qtx-polylang-migrator' ) );
 	}
 
-	$processed_xml = get_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
+	$processed_xml = qtxpm_get_staged_xml();
 	if ( ! $processed_xml ) {
 		wp_die( esc_html__( 'Nenhum XML processado encontrado. Por favor, processe um arquivo primeiro.', 'qtx-polylang-migrator' ) );
 	}
