@@ -4,7 +4,7 @@ Tags: migration, polylang, multilingual, import, qtranslate
 Requires at least: 6.9.4
 Tested up to: 7.0
 Requires PHP: 8.4
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,11 @@ Os anexos migrados mantêm as URLs do site de origem (o WXR referencia os arquiv
 - reimporte o mesmo XML usando o importador oficial do WordPress (`Ferramentas > Importar > WordPress`) com a opção **"Download and import file attachments"** marcada, para que os arquivos de mídia sejam baixados e reassociados no destino.
 
 == Changelog ==
+
+= 0.3.1 =
+
+* i18n: traduções completas da interface administrativa para inglês (en_US), espanhol (es_ES) e francês (fr_FR) — 76 strings por locale, além do pt_BR de origem.
+* Documentação: `languages/README.md` com o passo a passo para contribuir novos locales.
 
 = 0.3.0 =
 
