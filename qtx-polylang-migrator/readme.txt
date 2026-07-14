@@ -4,7 +4,7 @@ Tags: migration, polylang, multilingual, import, qtranslate
 Requires at least: 6.9.4
 Tested up to: 7.0
 Requires PHP: 8.4
-Stable tag: 0.3.1
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,15 @@ O migrador não processa os itens `wp:comment` do WXR — comentários do site d
 Os custom post types (CPTs) do site de origem só são conectados como traduções no Polylang se o tipo estiver habilitado para tradução em `Idiomas > Configurações > Tipos de post` **antes** de rodar a migração. CPTs não habilitados são importados sem idioma atribuído e ficam fora dos grupos de tradução — habilite cada CPT relevante no Polylang antes de fazer o upload do XML.
 
 == Changelog ==
+
+= 0.4.0 =
+
+* Novo: migração de taxonomias — categorias e tags reais do WXR (`domain="category"`/`"post_tag"`) agora são criadas no destino, com nomes multilíngues divididos em um termo por idioma, idioma atribuído e traduções de termos conectadas no Polylang; hierarquia de categorias reconstruída a partir dos dados do canal WXR.
+* Novo: preservação de autoria — `dc:creator` do WXR é mapeado para usuário existente no destino (login/slug/email); quando não encontrado, o login original fica registrado em `_pll_migration_original_author`.
+* Novo: postmeta multilíngue é dividido por idioma na transformação; valores serializados são preservados intactos e geram aviso no relatório de importação quando contêm marcadores.
+* Proteção: o guard de conteúdo cru também inspeciona `wp:postmeta` não serializado.
+* Desempenho: catálogo de idiomas do Polylang memoizado por requisição; ordenação hierárquica reescrita de O(n²) para O(n); XML em staging armazenado sem autoload (não pesa nas demais requisições do site).
+* Testes: novos testes de fidelidade da conversão (round-trip estrito de título/conteúdo/excerpt por idioma, datas/status, entidades HTML, UTF-8) e de migração de taxonomias.
 
 = 0.3.1 =
 
