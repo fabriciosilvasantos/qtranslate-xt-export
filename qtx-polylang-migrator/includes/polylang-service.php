@@ -508,26 +508,38 @@ function qtxpm_find_or_create_migrated_term( string $taxonomy, string $name, str
  * matches its own language. Monolingual category names create/reuse a single
  * term with no translation group.
  *
+ * When the multilingual category text has no block for the post's own
+ * language (e.g. `[:pt]Noticias[:]` on an `en` post), a term for that
+ * missing language is created using the best available name (the first
+ * language variant found in the text), connected to the existing
+ * translation group, and assigned to the post — instead of silently
+ * falling back to a term from a different language. A warning describing
+ * the substitution is included in the returned array so the caller can
+ * surface it to the user.
+ *
  * @param int                   $post_id Migrated post ID.
  * @param SimpleXMLElement      $category WXR `<category>` element.
  * @param string                $post_language Resolved language of the migrated post (qTranslate code, e.g. `pt`/`pb`).
  * @param array<string, array{term_id: int, parent_nicename: string, name: string}> $category_hierarchy Channel-level `<wp:category>` hierarchy map keyed by nicename.
- * @return void
+ * @param string                $post_title Migrated post title, used only to make warning messages traceable.
+ * @return string[] Warning messages produced while importing this category (empty when nothing noteworthy happened).
  */
-function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $category, string $post_language, array $category_hierarchy = array() ): void {
+function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $category, string $post_language, array $category_hierarchy = array(), string $post_title = '' ): array {
+	$warnings = array();
+
 	if ( $post_id <= 0 ) {
-		return;
+		return $warnings;
 	}
 
 	$taxonomy = qtxpm_map_wxr_category_domain_to_taxonomy( (string) $category['domain'] );
 	if ( '' === $taxonomy ) {
-		return;
+		return $warnings;
 	}
 
 	$nicename = trim( (string) $category['nicename'] );
 	$raw_text = trim( (string) $category );
 	if ( '' === $raw_text ) {
-		return;
+		return $warnings;
 	}
 
 	$resolved_post_language = qtxpm_resolve_polylang_language_code( $post_language );
@@ -589,6 +601,45 @@ function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $categor
 		$new_language_added = true;
 	}
 
+	$post_language_key = '' !== $resolved_post_language ? $resolved_post_language : '_mono';
+
+	// The category text was multilingual but had no block for the post's own
+	// language: create a term for that missing language rather than silently
+	// attaching the post to a term from a different language.
+	if ( $is_multilingual && '_mono' !== $post_language_key && ! isset( $group_term_ids[ $post_language_key ] ) ) {
+		$fallback_source_language = (string) array_key_first( $names_by_language );
+		$fallback_name = trim( (string) reset( $names_by_language ) );
+
+		if ( '' !== $fallback_name ) {
+			$fallback_term_id = qtxpm_find_or_create_migrated_term( $taxonomy, $fallback_name, $nicename, $resolved_post_language );
+
+			if ( $fallback_term_id > 0 ) {
+				if ( $original_term_id > 0 && function_exists( 'update_term_meta' ) ) {
+					update_term_meta( $fallback_term_id, '_pll_migration_original_id', $original_term_id );
+					update_term_meta( $fallback_term_id, '_pll_migration_parent_id', $original_parent_term_id );
+					update_term_meta( $fallback_term_id, '_pll_migration_lang', $resolved_post_language );
+					if ( '' !== $run_id ) {
+						update_term_meta( $fallback_term_id, '_pll_migration_run', $run_id );
+					}
+				}
+
+				$group_term_ids[ $post_language_key ] = $fallback_term_id;
+				qtxpm_remember_runtime_term_group( $group_key, $post_language_key, $fallback_term_id );
+				$new_language_added = true;
+
+				$warnings[] = sprintf(
+					/* translators: 1: taxonomy term name reused, 2: post's language code, 3: source language code the name was copied from, 4: post title, 5: post ID. */
+					__( 'A categoria "%1$s" nao possui traducao para o idioma "%2$s"; o nome do idioma "%3$s" foi reaproveitado para criar essa variante (post "%4$s", ID %5$d).', 'qtx-polylang-migrator' ),
+					$fallback_name,
+					$resolved_post_language,
+					$fallback_source_language,
+					$post_title,
+					$post_id
+				);
+			}
+		}
+	}
+
 	// Only (re-)link translations when this call actually contributed a new
 	// language variant to the group; otherwise a later post referencing the
 	// same already-fully-resolved category would re-save the same
@@ -598,10 +649,11 @@ function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $categor
 		pll_save_term_translations( $linkable_term_ids );
 	}
 
-	$post_language_key = '' !== $resolved_post_language ? $resolved_post_language : '_mono';
 	$term_id_for_post = $group_term_ids[ $post_language_key ] ?? ( reset( $group_term_ids ) ?: 0 );
 
 	if ( $term_id_for_post > 0 && function_exists( 'wp_set_object_terms' ) ) {
 		wp_set_object_terms( $post_id, array( $term_id_for_post ), $taxonomy, true );
 	}
+
+	return $warnings;
 }

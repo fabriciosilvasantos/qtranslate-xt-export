@@ -225,17 +225,27 @@ if ( ! function_exists( 'wp_insert_term' ) ) {
 
 		$name = (string) $term;
 
+		$slug = isset( $args['slug'] ) && '' !== $args['slug'] ? (string) $args['slug'] : sanitize_title( $name );
+		$parent = isset( $args['parent'] ) ? (int) $args['parent'] : 0;
+
+		// Mirrors WordPress core's actual `wp_insert_term()` duplicate check:
+		// a `term_exists` error is only raised when both the name AND the
+		// (possibly caller-supplied) slug collide with an existing term in
+		// the same taxonomy. A same-name term with a distinct slug (e.g. the
+		// migrator's per-language `name-en`/`name-pt` suffixing) is a valid,
+		// distinct term — this is how Polylang itself creates translated
+		// terms that share a display name.
 		foreach ( $GLOBALS['qtx_wp_terms'] as $existing_term ) {
-			if ( $existing_term['taxonomy'] === $taxonomy && strcasecmp( $existing_term['name'], $name ) === 0 ) {
+			if ( $existing_term['taxonomy'] === $taxonomy
+				&& strcasecmp( $existing_term['name'], $name ) === 0
+				&& $existing_term['slug'] === $slug
+			) {
 				return new WP_Error( 'term_exists', 'A term with the name provided already exists.', $existing_term['term_id'] );
 			}
 		}
 
 		$term_id = (int) $GLOBALS['qtx_wp_next_term_id'];
 		$GLOBALS['qtx_wp_next_term_id'] = $term_id + 1;
-
-		$slug = isset( $args['slug'] ) && '' !== $args['slug'] ? (string) $args['slug'] : sanitize_title( $name );
-		$parent = isset( $args['parent'] ) ? (int) $args['parent'] : 0;
 
 		$GLOBALS['qtx_wp_terms'][ $term_id ] = array(
 			'term_id'  => $term_id,

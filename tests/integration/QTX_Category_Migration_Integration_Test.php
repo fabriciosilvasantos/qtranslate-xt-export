@@ -139,6 +139,102 @@ XML;
 		$this->assertSame( array( $en_term['term_id'] ), $post_en_terms );
 	}
 
+	public function test_category_missing_post_language_variant_creates_term_and_emits_warning(): void {
+		$xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>Post PT</title>
+		<guid isPermaLink="false">post-pt</guid>
+		<content:encoded><![CDATA[Conteudo]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="language" nicename="pt">pt</category>
+		<category domain="category" nicename="noticias"><![CDATA[[:pt]Noticias[:]]]></category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[post-pt]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[post]]></wp:post_type>
+	</item>
+	<item>
+		<title>Post EN</title>
+		<guid isPermaLink="false">post-en</guid>
+		<content:encoded><![CDATA[Content]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="language" nicename="en">en</category>
+		<category domain="category" nicename="noticias"><![CDATA[[:pt]Noticias[:]]]></category>
+		<wp:post_id>2</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[post-en]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[post]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$result = self::importXml( $xml );
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( 2, $result['imported'] );
+
+		// The category text only had a `[:pt]` block; a new `en` term must be
+		// created (reusing the pt name) instead of the en post silently
+		// receiving the pt term.
+		$terms = $GLOBALS['qtx_wp_terms'];
+		$this->assertCount( 2, $terms, 'A term must be created for both pt (from the block) and en (fallback).' );
+
+		$pt_term = null;
+		$en_term = null;
+		foreach ( $terms as $term ) {
+			$language = $GLOBALS['qtx_polylang_term_languages'][ $term['term_id'] ] ?? null;
+			if ( 'pt' === $language ) {
+				$pt_term = $term;
+			} elseif ( 'en' === $language ) {
+				$en_term = $term;
+			}
+		}
+
+		$this->assertNotNull( $pt_term, 'PT term variant must be created from the block.' );
+		$this->assertNotNull( $en_term, 'EN term variant must be created as a fallback for the missing block.' );
+		$this->assertSame( 'Noticias', $pt_term['name'] );
+		$this->assertSame( 'Noticias', $en_term['name'], 'The fallback term reuses the only available name.' );
+
+		// The two variants must be linked as Polylang term translations.
+		$this->assertNotEmpty( $GLOBALS['qtx_polylang_saved_term_translations'] );
+		$last_translation_group = end( $GLOBALS['qtx_polylang_saved_term_translations'] );
+		$this->assertSame(
+			array(
+				'pt' => $pt_term['term_id'],
+				'en' => $en_term['term_id'],
+			),
+			$last_translation_group
+		);
+
+		// The en post must receive the new en term, not the pt one.
+		$post_en_terms = $GLOBALS['qtx_wp_object_terms'][2]['category'] ?? array();
+		$this->assertSame( array( $en_term['term_id'] ), $post_en_terms );
+
+		$matched_warnings = array_filter(
+			$result['warnings'],
+			static fn( string $warning ): bool => false !== strpos( $warning, 'Noticias' ) && false !== strpos( $warning, 'en' )
+		);
+		$this->assertNotEmpty( $matched_warnings, 'A warning must be emitted when a category has no translation for the post language.' );
+	}
+
 	public function test_multilingual_post_tag_uses_object_terms_not_categories(): void {
 		$xml = <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>

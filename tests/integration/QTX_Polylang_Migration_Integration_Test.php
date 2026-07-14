@@ -1405,6 +1405,13 @@ XML;
 			$this->assertTrue( $result['success'] );
 			$this->assertSame( 42, (int) ( $inserted_posts[1]['post_author'] ?? 0 ) );
 			$this->assertArrayNotHasKey( '_pll_migration_original_author', $GLOBALS['qtx_wp_post_meta'][1] ?? array() );
+
+			$matched_details = array_filter(
+				$result['details'],
+				static fn( string $detail ): bool => false !== strpos( $detail, 'joana' ) && false !== strpos( $detail, 'login' )
+			);
+			$this->assertNotEmpty( $matched_details, 'A detail entry recording the author match by "login" is expected.' );
+			$this->assertEmpty( $result['warnings'], 'No warning is expected when the author resolves successfully.' );
 		} finally {
 			@unlink( $temp_file );
 		}
@@ -1430,6 +1437,12 @@ XML;
 				'autor-inexistente',
 				$GLOBALS['qtx_wp_post_meta'][1]['_pll_migration_original_author'] ?? null
 			);
+
+			$matched_warnings = array_filter(
+				$result['warnings'],
+				static fn( string $warning ): bool => false !== strpos( $warning, 'autor-inexistente' )
+			);
+			$this->assertNotEmpty( $matched_warnings, 'A warning about the unresolved author is expected.' );
 		} finally {
 			@unlink( $temp_file );
 		}

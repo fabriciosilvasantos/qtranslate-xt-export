@@ -66,6 +66,16 @@ function qtxpm_render_import_notices( array|false $import_result ): void {
 			</div>
 		</div>
 	<?php endif; ?>
+	<?php if ( ! empty( $import_result['warnings'] ) ) : ?>
+		<div class="card" style="margin-top: 20px;">
+			<h3><?php echo esc_html__( 'Avisos', 'qtx-polylang-migrator' ); ?></h3>
+			<div style="background: #fff8e5; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">
+				<?php foreach ( $import_result['warnings'] as $warning ) : ?>
+					<div style="margin-bottom: 5px; font-family: monospace; font-size: 13px;"><?php echo esc_html( $warning ); ?></div>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	<?php endif; ?>
 	<?php
 }
 

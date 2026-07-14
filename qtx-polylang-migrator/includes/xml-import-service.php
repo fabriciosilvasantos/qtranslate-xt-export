@@ -114,7 +114,11 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 				$initial_parent_id = qtxpm_resolve_parent_post_id( $imported_post_map, $original_post_parent, $item_language );
 
 				$creator_login = qtxpm_get_wxr_item_creator( $item );
-				$resolved_author_id = '' !== $creator_login ? qtxpm_resolve_wxr_author_id( $creator_login ) : 0;
+				$author_resolution = '' !== $creator_login ? qtxpm_resolve_wxr_author_id( $creator_login ) : array(
+					'id'    => 0,
+					'field' => '',
+				);
+				$resolved_author_id = $author_resolution['id'];
 
 				$post_data = array(
 					'post_title'        => (string) $item->title,
@@ -191,8 +195,25 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 						update_post_meta( $post_id, '_pll_migration_source', $migration_source_key );
 					}
 
-					if ( '' !== $creator_login && 0 === $resolved_author_id ) {
-						update_post_meta( $post_id, '_pll_migration_original_author', $creator_login );
+					if ( '' !== $creator_login ) {
+						if ( $resolved_author_id > 0 ) {
+							$result['details'][] = sprintf(
+								__( 'Autor "%1$s" casado com o usuario ID %2$d pelo campo "%3$s" (post "%4$s", ID %5$d).', 'qtx-polylang-migrator' ),
+								$creator_login,
+								$resolved_author_id,
+								$author_resolution['field'],
+								$post_data['post_title'],
+								$post_id
+							);
+						} else {
+							update_post_meta( $post_id, '_pll_migration_original_author', $creator_login );
+							$result['warnings'][] = sprintf(
+								__( 'Autor "%1$s" do post "%2$s" (ID %3$d) nao foi encontrado entre os usuarios existentes; o post ficara atribuido ao operador que executa a importacao. O login original foi preservado no metadado "_pll_migration_original_author".', 'qtx-polylang-migrator' ),
+								$creator_login,
+								$post_data['post_title'],
+								$post_id
+							);
+						}
 					}
 
 					foreach ( $item->category as $category ) {
@@ -203,7 +224,10 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 							continue;
 						}
 
-						qtxpm_import_wxr_post_category( (int) $post_id, $category, $item_language, $category_hierarchy );
+						$category_warnings = qtxpm_import_wxr_post_category( (int) $post_id, $category, $item_language, $category_hierarchy, $post_data['post_title'] );
+						if ( ! empty( $category_warnings ) ) {
+							array_push( $result['warnings'], ...$category_warnings );
+						}
 					}
 
 					$result['details'][] = sprintf(
@@ -345,28 +369,54 @@ function qtxpm_get_wxr_item_creator( SimpleXMLElement $item ): string {
 /**
  * Resolve a WXR `dc:creator` value to an existing WordPress user ID.
  *
- * Tries, in order, matching by login, by nicename/slug, and by email,
+ * Tries, in order, matching by login, by nicename/slug, and by email
+ * (in that order by default; filterable via `qtxpm_author_resolution_fields`),
  * since different qTranslate exports have been observed to populate
- * `dc:creator` with any of the three. Returns 0 when no user matches,
- * in which case the caller preserves the original author login in
- * `_pll_migration_original_author` post meta for traceability instead
- * of silently reassigning authorship to the importing user.
+ * `dc:creator` with any of the three.
+ *
+ * When no user matches, this function does NOT prevent authorship
+ * reassignment by itself: `wp_insert_post()` silently falls back to the
+ * currently logged-in operator running the import when `post_author` is
+ * omitted from the post data, which is WordPress core's own default
+ * behavior. What this function (and its caller) do instead is make that
+ * fallback traceable: the caller omits `post_author` when resolution
+ * fails and records the original `dc:creator` login in the
+ * `_pll_migration_original_author` post meta, and surfaces a warning so
+ * the operator is aware the post was attributed to them rather than the
+ * original author.
  *
  * @param string $creator_login `dc:creator` value from the WXR item.
- * @return int
+ * @return array{id: int, field: string} Resolved user ID and the field that matched (`login`/`slug`/`email`), or `array( 'id' => 0, 'field' => '' )` when no user matches.
  */
-function qtxpm_resolve_wxr_author_id( string $creator_login ): int {
+function qtxpm_resolve_wxr_author_id( string $creator_login ): array {
+	$no_match = array(
+		'id'    => 0,
+		'field' => '',
+	);
+
 	if ( '' === $creator_login || ! function_exists( 'get_user_by' ) ) {
-		return 0;
+		return $no_match;
 	}
 
-	foreach ( array( 'login', 'slug', 'email' ) as $field ) {
+	/**
+	 * Filter the ordered list of user fields tried when matching a WXR
+	 * `dc:creator` value to an existing WordPress user.
+	 *
+	 * @param string[] $fields Fields passed to `get_user_by()`, tried in order.
+	 */
+	$fields = apply_filters( 'qtxpm_author_resolution_fields', array( 'login', 'slug', 'email' ) );
+
+	foreach ( (array) $fields as $field ) {
+		$field = (string) $field;
 		$user = get_user_by( $field, $creator_login );
 
 		if ( $user && isset( $user->ID ) ) {
-			return (int) $user->ID;
+			return array(
+				'id'    => (int) $user->ID,
+				'field' => $field,
+			);
 		}
 	}
 
-	return 0;
+	return $no_match;
 }
