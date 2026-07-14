@@ -122,13 +122,12 @@ Check our [Wiki pages](https://github.com/qtranslate/qtranslate-xt/wiki):
 ### Troubleshooting "Languages are not set"
 If you see "Languages are not set" in the page listing:
 
-1. **Use Diagnostic Tool**: Access `wp-admin/tools.php?page=qtranslate-xt-diagnose`
-2. **Configure Languages**: Go to `wp-admin/options-general.php?page=qtranslate-xt`
-3. **Add Languages**: Enable at least one language (e.g., Portuguese, English)
-4. **Set Default**: Choose a default language
-5. **Format Content**: Use `[:pt]Text[:en]Text` format in posts
+1. **Configure Languages**: Go to `wp-admin/options-general.php?page=qtranslate-xt` (Settings > Languages)
+2. **Add Languages**: Enable at least one language (e.g., Portuguese, English)
+3. **Set Default**: Choose a default language
+4. **Format Content**: Use `[:pt]Text[:en]Text` format in posts
 
-The diagnostic tool will identify configuration issues and provide specific solutions.
+If you were expecting to migrate content to Polylang instead of fixing a qTranslate-XT install, the built-in migration UI and its diagnostic tool were removed in 3.17.0; use the standalone [`qtx-polylang-migrator`](qtx-polylang-migrator/) plugin on the destination site instead.
 
 ### How to update qTranslate-XT with the last release?
 Since the -XT version is not available at wordpress.org, we recommend you to install [GitHub Updater](https://github.com/afragen/github-updater). This is is an awesome tool to update plugins from a git repo (with many other features). It checks regularly the last release available in github (from the `git tags`) and compares it to your current version (defined in the header of `qtranslate.php`). If a new release is available an update link will appear as for a regular plugin from Wordpress. The check is performed even if the plugin is deactivated.
