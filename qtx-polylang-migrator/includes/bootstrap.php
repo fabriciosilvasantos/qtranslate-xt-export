@@ -363,3 +363,104 @@ function qtxpm_get_polylang_language_catalog(): array {
 
 	return $catalog;
 }
+
+/**
+ * Build a nicename-indexed map of channel-level `<wp:category>` hierarchy
+ * data (term_id / parent nicename / display name) from a loaded WXR
+ * document.
+ *
+ * Unlike the per-item `<category>` elements (which only carry a nicename and
+ * do not expose parent relationships), the channel-level `<wp:category>`
+ * elements carry the original term ID and parent nicename, which is what
+ * makes reconstructing category hierarchy after migration possible.
+ *
+ * @param SimpleXMLElement $xml Loaded WXR document.
+ * @return array<string, array{term_id: int, parent_nicename: string, name: string}>
+ */
+function qtxpm_build_wxr_category_hierarchy_map( SimpleXMLElement $xml ): array {
+	$map = array();
+
+	if ( ! isset( $xml->channel ) ) {
+		return $map;
+	}
+
+	$namespaces = $xml->getNamespaces( true );
+	if ( empty( $namespaces['wp'] ) ) {
+		return $map;
+	}
+
+	$wp_channel = $xml->channel->children( $namespaces['wp'] );
+	if ( ! isset( $wp_channel->category ) ) {
+		return $map;
+	}
+
+	foreach ( $wp_channel->category as $wp_category ) {
+		$nicename = trim( (string) $wp_category->category_nicename );
+		if ( '' === $nicename ) {
+			continue;
+		}
+
+		$map[ $nicename ] = array(
+			'term_id'         => (int) $wp_category->term_id,
+			'parent_nicename' => trim( (string) $wp_category->category_parent ),
+			'name'            => (string) $wp_category->cat_name,
+		);
+	}
+
+	return $map;
+}
+
+/**
+ * Build a term mapping keyed by original term ID and language, mirroring
+ * `qtxpm_build_original_post_language_map()` for taxonomy terms.
+ *
+ * @param array $terms List of migrated terms with `_pll_migration_original_id`/`_pll_migration_lang` metadata.
+ * @return array<int, array<string, int>>
+ */
+function qtxpm_build_original_term_language_map( array $terms ): array {
+	$map = array();
+
+	foreach ( $terms as $term ) {
+		$original_id = isset( $term->original_id ) ? (int) $term->original_id : 0;
+		$term_id = isset( $term->term_id ) ? (int) $term->term_id : 0;
+		$lang = isset( $term->lang ) && is_string( $term->lang ) ? $term->lang : '';
+
+		if ( $original_id <= 0 || $term_id <= 0 ) {
+			continue;
+		}
+
+		if ( ! isset( $map[ $original_id ] ) ) {
+			$map[ $original_id ] = array();
+		}
+
+		if ( '' !== $lang ) {
+			$map[ $original_id ][ $lang ] = $term_id;
+		}
+
+		$map[ $original_id ]['*'] = $term_id;
+	}
+
+	return $map;
+}
+
+/**
+ * Build an SQL INNER JOIN fragment scoping terms (aliased per `$alias`) to
+ * the current migration run, mirroring `qtxpm_get_migration_run_scope_join()`
+ * for posts.
+ *
+ * @param string $alias Table alias used for `wp_terms` in the calling query.
+ * @return string
+ */
+function qtxpm_get_migration_run_scope_join_for_terms( string $alias = 't' ): string {
+	global $wpdb;
+
+	$run_id = qtxpm_get_current_migration_run()['run'];
+	if ( '' === $run_id || ! isset( $wpdb ) ) {
+		return '';
+	}
+
+	return $wpdb->prepare(
+		" INNER JOIN {$wpdb->termmeta} tm_run ON {$alias}.term_id = tm_run.term_id AND tm_run.meta_key = '_pll_migration_run' AND tm_run.meta_value = %s",
+		$run_id
+	);
+}

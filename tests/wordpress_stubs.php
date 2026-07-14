@@ -100,6 +100,10 @@ if ( ! function_exists( 'qtx_wordpress_stub_reset' ) ) {
 		$GLOBALS['qtx_wp_verify_nonce_result'] = 1;
 		$GLOBALS['qtx_wp_admin_pages'] = array();
 		$GLOBALS['qtx_wp_redirects'] = array();
+		$GLOBALS['qtx_wp_terms'] = array();
+		$GLOBALS['qtx_wp_next_term_id'] = 1;
+		$GLOBALS['qtx_wp_term_meta'] = array();
+		$GLOBALS['qtx_wp_object_terms'] = array();
 	}
 }
 
@@ -163,35 +167,193 @@ if ( ! function_exists( 'wp_delete_object_term_relationships' ) ) {
 
 if ( ! function_exists( 'wp_insert_term' ) ) {
 	function wp_insert_term( $term, $taxonomy, $args = array() ) {
-		static $term_id = 1;
+		if ( ! isset( $GLOBALS['qtx_wp_terms'] ) || ! is_array( $GLOBALS['qtx_wp_terms'] ) ) {
+			$GLOBALS['qtx_wp_terms'] = array();
+		}
+		if ( ! isset( $GLOBALS['qtx_wp_next_term_id'] ) ) {
+			$GLOBALS['qtx_wp_next_term_id'] = 1;
+		}
+
+		$name = (string) $term;
+
+		foreach ( $GLOBALS['qtx_wp_terms'] as $existing_term ) {
+			if ( $existing_term['taxonomy'] === $taxonomy && strcasecmp( $existing_term['name'], $name ) === 0 ) {
+				return new WP_Error( 'term_exists', 'A term with the name provided already exists.', $existing_term['term_id'] );
+			}
+		}
+
+		$term_id = (int) $GLOBALS['qtx_wp_next_term_id'];
+		$GLOBALS['qtx_wp_next_term_id'] = $term_id + 1;
+
+		$slug = isset( $args['slug'] ) && '' !== $args['slug'] ? (string) $args['slug'] : sanitize_title( $name );
+		$parent = isset( $args['parent'] ) ? (int) $args['parent'] : 0;
+
+		$GLOBALS['qtx_wp_terms'][ $term_id ] = array(
+			'term_id'  => $term_id,
+			'name'     => $name,
+			'slug'     => $slug,
+			'taxonomy' => (string) $taxonomy,
+			'parent'   => $parent,
+		);
+
 		return array(
-			'term_id' => $term_id++,
-			'term_taxonomy_id' => $term_id - 1,
+			'term_id'          => $term_id,
+			'term_taxonomy_id' => $term_id,
 		);
 	}
 }
 
 if ( ! function_exists( 'get_cat_ID' ) ) {
 	function get_cat_ID( $cat_name ) {
-		return 0;
+		$term = get_term_by( 'name', $cat_name, 'category' );
+
+		return is_object( $term ) ? (int) $term->term_id : 0;
 	}
 }
 
 if ( ! function_exists( 'wp_set_post_categories' ) ) {
 	function wp_set_post_categories( $post_id = 0, $post_categories = array(), $append = false ) {
-		return true;
+		return wp_set_object_terms( $post_id, $post_categories, 'category', $append );
 	}
 }
 
 if ( ! function_exists( 'get_term' ) ) {
 	function get_term( $term, $taxonomy = '', $output = OBJECT, $filter = 'raw' ) {
+		$term_id = (int) $term;
+
+		if ( isset( $GLOBALS['qtx_wp_terms'][ $term_id ] ) ) {
+			return (object) $GLOBALS['qtx_wp_terms'][ $term_id ];
+		}
+
 		return (object) array(
-			'term_id' => (int) $term,
+			'term_id' => $term_id,
 			'name'    => 'Test Term',
 			'slug'    => 'test-term',
 			'taxonomy' => $taxonomy ?: 'category',
 			'parent'  => 0,
 		);
+	}
+}
+
+if ( ! function_exists( 'get_term_by' ) ) {
+	function get_term_by( $field, $value, $taxonomy = '', $output = OBJECT, $filter = 'raw' ) {
+		$terms = $GLOBALS['qtx_wp_terms'] ?? array();
+
+		foreach ( $terms as $existing_term ) {
+			if ( '' !== $taxonomy && $existing_term['taxonomy'] !== $taxonomy ) {
+				continue;
+			}
+
+			if ( 'name' === $field && strcasecmp( $existing_term['name'], (string) $value ) === 0 ) {
+				return (object) $existing_term;
+			}
+
+			if ( 'slug' === $field && $existing_term['slug'] === (string) $value ) {
+				return (object) $existing_term;
+			}
+
+			if ( 'term_id' === $field && (int) $existing_term['term_id'] === (int) $value ) {
+				return (object) $existing_term;
+			}
+		}
+
+		return false;
+	}
+}
+
+if ( ! function_exists( 'wp_set_object_terms' ) ) {
+	function wp_set_object_terms( $object_id, $terms, $taxonomy, $append = false ) {
+		if ( ! isset( $GLOBALS['qtx_wp_object_terms'] ) || ! is_array( $GLOBALS['qtx_wp_object_terms'] ) ) {
+			$GLOBALS['qtx_wp_object_terms'] = array();
+		}
+		if ( ! isset( $GLOBALS['qtx_wp_object_terms'][ $object_id ][ $taxonomy ] ) || ! $append ) {
+			$GLOBALS['qtx_wp_object_terms'][ $object_id ][ $taxonomy ] = array();
+		}
+
+		$term_ids = array();
+		foreach ( (array) $terms as $term ) {
+			$term_ids[] = (int) $term;
+		}
+
+		$GLOBALS['qtx_wp_object_terms'][ $object_id ][ $taxonomy ] = array_values(
+			array_unique(
+				array_merge( $GLOBALS['qtx_wp_object_terms'][ $object_id ][ $taxonomy ], $term_ids )
+			)
+		);
+
+		return $term_ids;
+	}
+}
+
+if ( ! function_exists( 'wp_get_object_terms' ) ) {
+	function wp_get_object_terms( $object_ids, $taxonomies, $args = array() ) {
+		$object_id = is_array( $object_ids ) ? reset( $object_ids ) : $object_ids;
+		$taxonomy = is_array( $taxonomies ) ? reset( $taxonomies ) : $taxonomies;
+
+		$term_ids = $GLOBALS['qtx_wp_object_terms'][ $object_id ][ $taxonomy ] ?? array();
+
+		$terms = array();
+		foreach ( $term_ids as $term_id ) {
+			if ( isset( $GLOBALS['qtx_wp_terms'][ $term_id ] ) ) {
+				$terms[] = (object) $GLOBALS['qtx_wp_terms'][ $term_id ];
+			}
+		}
+
+		return $terms;
+	}
+}
+
+if ( ! function_exists( 'update_term_meta' ) ) {
+	function update_term_meta( $term_id, $meta_key, $meta_value, $prev_value = '' ) {
+		if ( ! isset( $GLOBALS['qtx_wp_term_meta'] ) || ! is_array( $GLOBALS['qtx_wp_term_meta'] ) ) {
+			$GLOBALS['qtx_wp_term_meta'] = array();
+		}
+
+		$GLOBALS['qtx_wp_term_meta'][ $term_id ][ $meta_key ] = $meta_value;
+		return true;
+	}
+}
+
+if ( ! function_exists( 'get_term_meta' ) ) {
+	function get_term_meta( $term_id, $meta_key = '', $single = false ) {
+		if ( '' === $meta_key ) {
+			return $GLOBALS['qtx_wp_term_meta'][ $term_id ] ?? array();
+		}
+
+		$value = $GLOBALS['qtx_wp_term_meta'][ $term_id ][ $meta_key ] ?? null;
+		if ( null === $value ) {
+			return $single ? '' : array();
+		}
+
+		return $single ? $value : array( $value );
+	}
+}
+
+if ( ! function_exists( 'sanitize_title' ) ) {
+	function sanitize_title( $title, $fallback_title = '', $context = 'save' ) {
+		$title = strtolower( trim( (string) $title ) );
+		$title = remove_accents( $title );
+		$title = preg_replace( '/[^a-z0-9]+/', '-', $title );
+
+		return trim( (string) $title, '-' );
+	}
+}
+
+if ( ! function_exists( 'remove_accents' ) ) {
+	function remove_accents( $string ) {
+		if ( ! preg_match( '/[\x80-\xff]/', (string) $string ) ) {
+			return $string;
+		}
+
+		$transliterated = @iconv( 'UTF-8', 'ASCII//TRANSLIT', (string) $string );
+
+		return false !== $transliterated ? $transliterated : $string;
+	}
+}
+
+if ( ! function_exists( 'taxonomy_exists' ) ) {
+	function taxonomy_exists( $taxonomy ) {
+		return in_array( $taxonomy, array( 'category', 'post_tag', 'language' ), true );
 	}
 }
 

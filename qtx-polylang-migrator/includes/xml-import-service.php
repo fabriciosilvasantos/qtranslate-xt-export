@@ -61,6 +61,7 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 		qtxpm_set_current_migration_run( $migration_run_id, $migration_source_key );
 
 		$namespaces = $xml->getNamespaces( true );
+		$category_hierarchy = qtxpm_build_wxr_category_hierarchy_map( $xml );
 		$imported_count = 0;
 		$skipped_count = 0;
 		$error_count = 0;
@@ -174,21 +175,14 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 					}
 
 					foreach ( $item->category as $category ) {
-						$domain = (string) $category['domain'];
-						$nicename = (string) $category['nicename'];
+						$domain = strtolower( trim( (string) $category['domain'] ) );
 
 						if ( 'language' === $domain ) {
-							qtxpm_assign_post_language( (int) $post_id, (string) $nicename );
+							qtxpm_assign_post_language( (int) $post_id, (string) $category['nicename'] );
 							continue;
 						}
 
-						if ( ! $domain ) {
-							$cat_name = (string) $category;
-							$cat_id = get_cat_ID( $cat_name );
-							if ( $cat_id ) {
-								wp_set_post_categories( $post_id, array( $cat_id ) );
-							}
-						}
+						qtxpm_import_wxr_post_category( (int) $post_id, $category, $item_language, $category_hierarchy );
 					}
 
 					$result['details'][] = sprintf(
