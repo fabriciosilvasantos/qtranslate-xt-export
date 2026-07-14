@@ -4,11 +4,66 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Internal accessor for the per-request Polylang languages cache used by
+ * `qtxpm_get_polylang_languages()`.
+ *
+ * Kept as a single `static`-backed accessor (rather than one static per
+ * function) so the cache can be cleared from outside without forcing an
+ * immediate recomputation — `qtxpm_reset_polylang_languages_cache()` clears
+ * it lazily (the next real call recomputes from whatever state exists at
+ * that time), while `qtxpm_get_polylang_languages( true )` recomputes and
+ * repopulates it immediately, which is what `qtxpm_ensure_polylang_language()`
+ * needs right after it actually provisions a new language.
+ *
+ * @param string      $mode  'get' returns the cached value (or null), 'set' replaces it, 'clear' invalidates it.
+ * @param string[]|null $value New cached value when `$mode === 'set'`.
+ * @return string[]|null
+ */
+function qtxpm_polylang_languages_cache( string $mode, ?array $value = null ): ?array {
+	static $cache = null;
+
+	if ( 'set' === $mode ) {
+		$cache = $value;
+	} elseif ( 'clear' === $mode ) {
+		$cache = null;
+	}
+
+	return $cache;
+}
+
+/**
+ * Invalidate the per-request `qtxpm_get_polylang_languages()` cache without
+ * recomputing it. Intended for test/reset helpers so the next real call
+ * recomputes from whatever state exists at that point, instead of eagerly
+ * locking in a snapshot of the current (possibly not-yet-final) state.
+ *
+ * @return void
+ */
+function qtxpm_reset_polylang_languages_cache(): void {
+	qtxpm_polylang_languages_cache( 'clear' );
+}
+
+/**
  * Return available Polylang language slugs.
  *
+ * The result is memoized for the duration of the request (a single
+ * migration run may call this dozens of times while resolving languages
+ * for every WXR item). Pass `$force_refresh = true` to recompute and
+ * replace the cached value — used by `qtxpm_ensure_polylang_language()`
+ * right after provisioning a new language, so callers immediately see it
+ * without waiting for the next uncached call.
+ *
+ * @param bool $force_refresh Whether to bypass and refresh the memoized value.
  * @return string[]
  */
-function qtxpm_get_polylang_languages(): array {
+function qtxpm_get_polylang_languages( bool $force_refresh = false ): array {
+	if ( ! $force_refresh ) {
+		$cached_languages = qtxpm_polylang_languages_cache( 'get' );
+		if ( null !== $cached_languages ) {
+			return $cached_languages;
+		}
+	}
+
 	$languages = array();
 
 	if ( function_exists( 'pll_languages_list' ) ) {
@@ -59,7 +114,10 @@ function qtxpm_get_polylang_languages(): array {
 		(array) $languages
 	);
 
-	return array_values( array_unique( array_filter( $languages ) ) );
+	$resolved_languages = array_values( array_unique( array_filter( $languages ) ) );
+	qtxpm_polylang_languages_cache( 'set', $resolved_languages );
+
+	return $resolved_languages;
 }
 
 /**
@@ -176,6 +234,7 @@ function qtxpm_ensure_polylang_language( string $language_code, bool $set_defaul
 	}
 
 	qtxpm_remember_runtime_polylang_language( $language_code );
+	qtxpm_get_polylang_languages( true );
 
 	return $language_code;
 }

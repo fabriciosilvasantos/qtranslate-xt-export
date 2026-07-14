@@ -164,6 +164,75 @@ function qtxpm_get_migration_transient_key( string $suffix ): string {
 }
 
 /**
+ * Return the option name used to store the staged (processed) WXR XML.
+ *
+ * The staged XML can be several megabytes for large exports. It is stored
+ * via `update_option( ..., false )` instead of `set_transient()` so it is
+ * explicitly never autoloaded on every request, regardless of the current
+ * WordPress version's internal transient-autoload heuristics.
+ *
+ * @return string
+ */
+function qtxpm_get_staged_xml_option_name(): string {
+	return qtxpm_get_migration_transient_key( 'staged_xml_data' );
+}
+
+/**
+ * Persist the staged (processed) WXR XML without autoloading it.
+ *
+ * @param string $content Processed WXR XML content.
+ * @param int    $expiration Time-to-live in seconds.
+ * @return void
+ */
+function qtxpm_set_staged_xml( string $content, int $expiration = 3600 ): void {
+	update_option(
+		qtxpm_get_staged_xml_option_name(),
+		array(
+			'value'      => $content,
+			'expires_at' => time() + $expiration,
+		),
+		false
+	);
+}
+
+/**
+ * Retrieve the staged (processed) WXR XML, honoring its expiration.
+ *
+ * Falls back to the legacy `set_transient()`-based storage used by earlier
+ * versions of the migrator, so an in-flight migration started before this
+ * change is not silently lost.
+ *
+ * @return string|false
+ */
+function qtxpm_get_staged_xml(): string|false {
+	$stored = get_option( qtxpm_get_staged_xml_option_name(), false );
+
+	if ( is_array( $stored ) && array_key_exists( 'value', $stored ) && isset( $stored['expires_at'] ) ) {
+		if ( (int) $stored['expires_at'] < time() ) {
+			delete_option( qtxpm_get_staged_xml_option_name() );
+
+			return false;
+		}
+
+		return (string) $stored['value'];
+	}
+
+	$legacy_value = get_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
+
+	return false !== $legacy_value ? (string) $legacy_value : false;
+}
+
+/**
+ * Delete the staged (processed) WXR XML, including the legacy transient.
+ *
+ * @return void
+ */
+function qtxpm_delete_staged_xml(): void {
+	delete_option( qtxpm_get_staged_xml_option_name() );
+	delete_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
+}
+
+/**
  * Return the option name that stores the current migration run context.
  *
  * @return string

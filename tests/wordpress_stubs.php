@@ -261,6 +261,13 @@ if ( ! function_exists( 'update_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'delete_option' ) ) {
+	function delete_option( $option ) {
+		unset( $GLOBALS['qtx_wp_options'][ $option ] );
+		return true;
+	}
+}
+
 // ============================================================================
 // DATABASE CLASS (MOCK)
 // ============================================================================
