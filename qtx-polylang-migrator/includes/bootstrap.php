@@ -15,6 +15,23 @@ if ( ! function_exists( 'qtxpm_is_multilingual_text' ) ) {
 	}
 }
 
+if ( ! function_exists( 'qtxpm_is_serialized_meta_value' ) ) {
+	/**
+	 * Detect whether a postmeta value looks like PHP-serialized data.
+	 *
+	 * Splitting a serialized value on qTranslate language markers would
+	 * corrupt its structure, so serialized meta must never be split by the
+	 * transformer nor blocked by the raw-content guard; it is imported as-is
+	 * (with an import-time warning when it still contains language markers).
+	 *
+	 * @param string $value Raw meta value text.
+	 * @return bool
+	 */
+	function qtxpm_is_serialized_meta_value( string $value ): bool {
+		return preg_match( '/^(?:a|O|s):\d+:/', ltrim( $value ) ) === 1;
+	}
+}
+
 if ( ! function_exists( 'qtxpm_split_multilingual_text' ) ) {
 	/**
 	 * Split legacy qTranslate blocks using optional destination languages.

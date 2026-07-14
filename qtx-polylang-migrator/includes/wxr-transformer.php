@@ -95,6 +95,8 @@ function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $
 					$new_excerpt->textContent = qtxpm_get_language_value( $excerpt_by_lang, $lang, $default_lang, '', $languages );
 				}
 
+				qtxpm_split_postmeta_for_language( $xpath, $new_item, $lang, $default_lang, $languages );
+
 				$cat_element = $doc->createElement( 'category' );
 				$cat_element->setAttribute( 'domain', 'language' );
 				$cat_element->setAttribute( 'nicename', $lang );
@@ -130,6 +132,8 @@ function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $
 			$group_counter++;
 			continue;
 		}
+
+		qtxpm_split_postmeta_for_language( $xpath, $item, $default_lang, $default_lang, $languages );
 
 		$cat_element = $doc->createElement( 'category' );
 		$cat_element->setAttribute( 'domain', 'language' );
@@ -183,71 +187,116 @@ function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $
 }
 
 /**
- * Sort items by hierarchy.
+ * Split multilingual `wp:postmeta` values of a (possibly cloned) item into
+ * the value for a single target language.
+ *
+ * The transformer clones each multilingual item once per language, but
+ * `wp:postmeta` nodes are cloned verbatim; without this pass, a meta value
+ * such as `[:en]English[:pt]Portugues[:]` would be imported unmodified into
+ * every per-language clone. PHP-serialized values (`a:`, `O:`, `s:` prefixes)
+ * are left untouched, since splitting them on language markers would corrupt
+ * the serialized structure; `qtxpm_direct_xml_import()` surfaces a warning
+ * for those instead.
+ *
+ * @param DOMXPath $xpath XPath helper bound to the document (with wp:/content:/excerpt: namespaces registered).
+ * @param DOMNode  $item Item node (already cloned for the target language) to mutate in place.
+ * @param string   $lang Target language for this item/clone.
+ * @param string   $default_lang Site/migration default language, used as fallback.
+ * @param array    $languages Destination languages configured for the migration.
+ * @return void
+ */
+function qtxpm_split_postmeta_for_language( DOMXPath $xpath, DOMNode $item, string $lang, string $default_lang, array $languages ): void {
+	foreach ( $xpath->query( 'wp:postmeta', $item ) as $meta_node ) {
+		$value_node = $xpath->query( 'wp:meta_value', $meta_node )->item( 0 );
+
+		if ( ! $value_node ) {
+			continue;
+		}
+
+		$meta_text = $value_node->textContent;
+
+		if ( ! qtxpm_is_multilingual_text( $meta_text ) ) {
+			continue;
+		}
+
+		if ( qtxpm_is_serialized_meta_value( $meta_text ) ) {
+			continue;
+		}
+
+		$meta_by_lang = qtxpm_split_multilingual_text( $meta_text, $languages );
+		$value_node->textContent = qtxpm_get_language_value( $meta_by_lang, $lang, $default_lang, $meta_text, $languages );
+	}
+}
+
+/**
+ * Sort items by hierarchy (depth-first: each root/parent immediately
+ * followed by its children, recursively, siblings ordered by menu_order
+ * then original_id).
+ *
+ * Builds a parent_id => children index once (O(n)), so each item is
+ * looked up in O(1) amortized instead of re-scanning the full item list
+ * for every node as the previous O(n^2) implementation did.
  *
  * @param array $items Array of items with their data.
  * @return array
  */
 function qtxpm_sort_items_by_hierarchy( array $items ): array {
+	$children_by_parent = qtxpm_index_items_by_parent( $items );
+
 	$sorted = array();
-	$root_items = array();
-
-	foreach ( $items as $item ) {
-		if ( $item['original_parent'] == 0 ) {
-			$root_items[] = $item;
-		}
-	}
-
-	usort(
-		$root_items,
-		static function ( array $item_a, array $item_b ): int {
-			if ( $item_a['menu_order'] === $item_b['menu_order'] ) {
-				return $item_a['original_id'] - $item_b['original_id'];
-			}
-
-			return $item_a['menu_order'] - $item_b['menu_order'];
-		}
-	);
-
-	foreach ( $root_items as $root_item ) {
+	foreach ( $children_by_parent[0] ?? array() as $root_item ) {
 		$sorted[] = $root_item;
-		qtxpm_add_children_to_sorted( $items, $root_item['original_id'], $sorted );
+		qtxpm_add_children_to_sorted( $children_by_parent, (int) $root_item['original_id'], $sorted );
 	}
 
 	return $sorted;
 }
 
 /**
- * Add children of a parent item to sorted array recursively.
+ * Group items by their `original_parent`, with each group pre-sorted by
+ * menu_order (ties broken by original_id) so both the root pass and every
+ * recursive child pass in `qtxpm_add_children_to_sorted()` can consume the
+ * bucket directly without re-sorting or re-scanning all items.
  *
- * @param array $items All items.
- * @param int   $parent_id Parent ID to find children for.
- * @param array $sorted Reference to sorted array to append children to.
- * @return void
+ * @param array $items Array of items with their data.
+ * @return array<int, array>
  */
-function qtxpm_add_children_to_sorted( array $items, int $parent_id, array &$sorted ): void {
-	$children = array();
+function qtxpm_index_items_by_parent( array $items ): array {
+	$index = array();
 
 	foreach ( $items as $item ) {
-		if ( $item['original_parent'] == $parent_id ) {
-			$children[] = $item;
-		}
+		$parent_id = (int) $item['original_parent'];
+		$index[ $parent_id ][] = $item;
 	}
 
-	usort(
-		$children,
-		static function ( array $item_a, array $item_b ): int {
-			if ( $item_a['menu_order'] === $item_b['menu_order'] ) {
-				return $item_a['original_id'] - $item_b['original_id'];
-			}
-
-			return $item_a['menu_order'] - $item_b['menu_order'];
+	$comparator = static function ( array $item_a, array $item_b ): int {
+		if ( $item_a['menu_order'] === $item_b['menu_order'] ) {
+			return $item_a['original_id'] - $item_b['original_id'];
 		}
-	);
 
-	foreach ( $children as $child ) {
+		return $item_a['menu_order'] - $item_b['menu_order'];
+	};
+
+	foreach ( $index as $parent_id => $children ) {
+		usort( $children, $comparator );
+		$index[ $parent_id ] = $children;
+	}
+
+	return $index;
+}
+
+/**
+ * Add children of a parent item to sorted array recursively.
+ *
+ * @param array<int, array> $children_by_parent Parent_id => pre-sorted children index built by `qtxpm_index_items_by_parent()`.
+ * @param int                $parent_id Parent ID to find children for.
+ * @param array              $sorted Reference to sorted array to append children to.
+ * @return void
+ */
+function qtxpm_add_children_to_sorted( array $children_by_parent, int $parent_id, array &$sorted ): void {
+	foreach ( $children_by_parent[ $parent_id ] ?? array() as $child ) {
 		$sorted[] = $child;
-		qtxpm_add_children_to_sorted( $items, $child['original_id'], $sorted );
+		qtxpm_add_children_to_sorted( $children_by_parent, (int) $child['original_id'], $sorted );
 	}
 }
 
