@@ -1,0 +1,344 @@
+# English (US) translations for qTranslate to Polylang Migrator package
+# Traduções em inglês (EUA) para o pacote qTranslate to Polylang Migrator.
+# Copyright (C) 2026 THE qTranslate to Polylang Migrator'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the qTranslate to Polylang Migrator package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: qTranslate to Polylang Migrator 0.2.0\n"
+"Report-Msgid-Bugs-To: https://github.com/qtranslate/qtranslate-xt/issues\n"
+"POT-Creation-Date: 2026-07-10 10:02-0300\n"
+"PO-Revision-Date: 2026-07-14 00:00-0300\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: qtx-polylang-migrator/includes/admin-render.php:202
+#, php-format
+msgid "%d posts foram ignorados por ja existirem."
+msgstr "%d posts were skipped because they already exist."
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:228
+#, php-format
+msgid ", %d erros"
+msgstr ", %d errors"
+
+#: qtx-polylang-migrator/includes/admin-actions.php:65
+#: qtx-polylang-migrator/includes/admin-actions.php:118
+#: qtx-polylang-migrator/includes/admin-actions.php:174
+#: qtx-polylang-migrator/includes/admin-actions.php:188
+msgid "Acesso negado."
+msgstr "Access denied."
+
+#: qtx-polylang-migrator/includes/admin-render.php:280
+msgid "Ajuda"
+msgstr "Help"
+
+#: qtx-polylang-migrator/includes/admin-render.php:174
+msgid "Arquivo WXR exportado do WordPress com conteudo qTranslate-XT"
+msgstr "WXR file exported from WordPress with qTranslate-XT content"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:33
+msgid "Arquivo XML nao encontrado ou nao legivel."
+msgstr "XML file not found or not readable."
+
+#: qtx-polylang-migrator/includes/admin-render.php:171
+msgid "Arquivo XML:"
+msgstr "XML file:"
+
+#: qtx-polylang-migrator/includes/admin-actions.php:82
+msgid "Arquivo excede o tamanho maximo permitido."
+msgstr "File exceeds the maximum allowed size."
+
+#: qtx-polylang-migrator/includes/admin-render.php:202
+#: qtx-polylang-migrator/includes/admin-render.php:234
+msgid "Atencao:"
+msgstr "Attention:"
+
+#: qtx-polylang-migrator/includes/admin-render.php:127
+msgid "Conexao de Traducoes"
+msgstr "Translation Connection"
+
+#: qtx-polylang-migrator/includes/admin-render.php:262
+#: qtx-polylang-migrator/includes/admin-render.php:284
+msgid "Configurar Polylang"
+msgstr "Configure Polylang"
+
+#: qtx-polylang-migrator/includes/admin-render.php:256
+msgid "Configure os menus do Polylang"
+msgstr "Configure the Polylang menus"
+
+#: qtx-polylang-migrator/includes/admin-render.php:198
+msgid "Conteudo processado:"
+msgstr "Processed content:"
+
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:272
+#, php-format
+msgid "Deduplicacao concluida: %1$d grupos analisados, %2$d grupos com duplicatas, %3$d posts movidos para rascunho."
+msgstr "Deduplication completed: %1$d groups analyzed, %2$d groups with duplicates, %3$d posts moved to draft."
+
+#: qtx-polylang-migrator/includes/admin-render.php:91
+msgid "Deduplicacao:"
+msgstr "Deduplication:"
+
+#: qtx-polylang-migrator/includes/admin-render.php:101
+msgid "Detalhes da Conexao e Reparo"
+msgstr "Connection and Repair Details"
+
+#: qtx-polylang-migrator/includes/admin-render.php:51
+msgid "Detalhes da Importacao"
+msgstr "Import Details"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:203
+#, php-format
+msgid "Erro ao inserir post \"%1$s\": %2$s"
+msgstr "Error inserting post \"%1$s\": %2$s"
+
+#: qtx-polylang-migrator/includes/admin-actions.php:102
+msgid "Erro ao ler o arquivo XML. Verifique se e uma exportacao WXR do WordPress valida."
+msgstr "Error reading the XML file. Check whether it is a valid WordPress WXR export."
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:201
+msgid "Erro desconhecido"
+msgstr "Unknown error"
+
+#: qtx-polylang-migrator/includes/admin-actions.php:145
+#: qtx-polylang-migrator/includes/xml-import-service.php:237
+msgid "Erro na importacao:"
+msgstr "Import error:"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:211
+#, php-format
+msgid "Erro no item %1$d: %2$s"
+msgstr "Error in item %1$d: %2$s"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:42
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:434
+msgid "Erro:"
+msgstr "Error:"
+
+#: qtx-polylang-migrator/includes/admin-render.php:61
+msgid "Erros Encontrados"
+msgstr "Errors Found"
+
+#: qtx-polylang-migrator/includes/admin-render.php:234
+msgid "Este processo ira reconstruir a estrutura de paginas e conectar todas as traducoes."
+msgstr "This process will rebuild the page structure and connect all translations."
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:50
+msgid "Estrutura XML invalida. Faltando channel/item."
+msgstr "Invalid XML structure. Missing channel/item."
+
+#: qtx-polylang-migrator/includes/admin-render.php:239
+msgid "Executar Migracao Completa"
+msgstr "Run Full Migration"
+
+#: qtx-polylang-migrator/includes/admin-render.php:232
+msgid "Execute a reconstrucao de hierarquia e conexao de traducoes automaticamente."
+msgstr "Run the hierarchy rebuild and translation connection automatically."
+
+#: qtx-polylang-migrator/includes/admin-render.php:166
+msgid "Faca upload do arquivo XML exportado do site original com qTranslate-XT."
+msgstr "Upload the XML file exported from the original site with qTranslate-XT."
+
+#: qtx-polylang-migrator/includes/admin-render.php:214
+msgid "Forcar Importacao (ignorar posts existentes)"
+msgstr "Force Import (ignore existing posts)"
+
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:420
+#, php-format
+msgid "Grupo %1$s conectado com os idiomas: %2$s."
+msgstr "Group %1$s connected with the languages: %2$s."
+
+#: qtx-polylang-migrator/includes/admin-render.php:86
+msgid "Hierarquia:"
+msgstr "Hierarchy:"
+
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:342
+#, php-format
+msgid "Idiomas restaurados: %1$d posts atribuidos, %2$d ignorados."
+msgstr "Languages restored: %1$d posts assigned, %2$d skipped."
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:221
+#, php-format
+msgid "Importacao concluida. %1$d posts importados, %2$d ignorados"
+msgstr "Import completed. %1$d posts imported, %2$d skipped"
+
+#: qtx-polylang-migrator/includes/admin-render.php:121
+msgid "Importacao para WordPress"
+msgstr "Import into WordPress"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:195
+#, php-format
+msgid "Importado: %1$s (ID: %2$d) - %3$d metadados."
+msgstr "Imported: %1$s (ID: %2$d) - %3$d metadata entries."
+
+#: qtx-polylang-migrator/includes/admin-render.php:221
+msgid "Importar para WordPress -> Proximo Passo"
+msgstr "Import into WordPress -> Next Step"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:89
+#, php-format
+msgid "Item %d: campos obrigatorios faltando."
+msgstr "Item %d: required fields missing."
+
+#: qtx-polylang-migrator/includes/admin-render.php:266
+msgid "Localize duplicatas seguras por idioma, mova orfaos para rascunho e reconecte os grupos no padrao do Polylang."
+msgstr "Locate duplicates safely by language, move orphans to draft, and reconnect the groups in the Polylang standard."
+
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:260
+#, php-format
+msgid "Manter %1$s #%2$d [%3$s] e mover duplicata para draft como #%4$d."
+msgstr "Keep %1$s #%2$d [%3$s] and move duplicate to draft as #%4$d."
+
+#: qtx-polylang-migrator/includes/admin-render.php:216
+msgid "Marque esta opcao para importar todos os posts, mesmo que ja existam no banco de dados."
+msgstr "Check this option to import all posts, even if they already exist in the database."
+
+#: qtx-polylang-migrator/includes/admin-render.php:249
+msgid "Migracao Concluida!"
+msgstr "Migration Completed!"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:40
+msgid "Nao foi possivel ler o arquivo XML."
+msgstr "Could not read the XML file."
+
+#: qtx-polylang-migrator/includes/admin-actions.php:123
+msgid "Nenhum XML processado encontrado. Por favor, processe um arquivo primeiro."
+msgstr "No processed XML found. Please process a file first."
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:55
+msgid "O XML contem blocos de idioma do qTranslate ainda nao transformados (ex.: [:xx], <!--:xx--> ou {:xx}). Processe o arquivo pela etapa de upload do migrador (que executa a transformacao) antes de importar, ou use a opcao de importacao avancada para forcar a importacao do conteudo bruto."
+msgstr "The XML contains qTranslate language blocks that have not yet been transformed (e.g., [:xx], <!--:xx--> or {:xx}). Process the file through the migrator's upload step (which performs the transformation) before importing, or use the advanced import option to force import of the raw content."
+
+#: qtx-polylang-migrator/includes/admin-render.php:196
+msgid "O XML foi processado. Clique abaixo para importar para o WordPress."
+msgstr "The XML has been processed. Click below to import it into WordPress."
+
+#: qtx-polylang-migrator/includes/admin-render.php:210
+msgid "Opcoes de Importacao"
+msgstr "Import Options"
+
+#: qtx-polylang-migrator/includes/admin-render.php:250
+msgid "Parabens! Sua migracao do qTranslate-XT para Polylang foi concluida com sucesso."
+msgstr "Congratulations! Your migration from qTranslate-XT to Polylang has completed successfully."
+
+#: qtx-polylang-migrator/includes/admin-render.php:165
+msgid "Passo 1: Upload do XML qTranslate-XT"
+msgstr "Step 1: Upload the qTranslate-XT XML"
+
+#: qtx-polylang-migrator/includes/admin-render.php:195
+msgid "Passo 2: Importar para WordPress"
+msgstr "Step 2: Import into WordPress"
+
+#: qtx-polylang-migrator/includes/admin-render.php:231
+msgid "Passo 3: Finalizar Migracao"
+msgstr "Step 3: Finish Migration"
+
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:365
+msgid "Polylang nao esta ativo ou a funcao necessaria esta indisponivel."
+msgstr "Polylang is not active or the required function is unavailable."
+
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:298
+msgid "Polylang nao esta ativo ou nao expoe pll_set_post_language()."
+msgstr "Polylang is not active or does not expose pll_set_post_language()."
+
+#: qtx-polylang-migrator/includes/admin-actions.php:69
+msgid "Por favor, envie um arquivo WXR valido."
+msgstr "Please upload a valid WXR file."
+
+#: qtx-polylang-migrator/includes/admin-render.php:198
+msgid "Posts e paginas separados por idioma com metadados para Polylang."
+msgstr "Posts and pages separated by language with metadata for Polylang."
+
+#: qtx-polylang-migrator/includes/admin-render.php:179
+msgid "Processar XML -> Proximo Passo"
+msgstr "Process XML -> Next Step"
+
+#: qtx-polylang-migrator/includes/admin-render.php:25
+msgid "Processo completo em um unico lugar: exportacao, importacao, reconstrucao e conexao."
+msgstr "Complete process in one place: export, import, rebuild, and connect."
+
+#: qtx-polylang-migrator/includes/admin-render.php:115
+msgid "Progresso da Migracao"
+msgstr "Migration Progress"
+
+#: qtx-polylang-migrator/includes/admin-render.php:252
+msgid "Proximos passos:"
+msgstr "Next steps:"
+
+#: qtx-polylang-migrator/includes/admin-render.php:124
+msgid "Reconstrucao de Hierarquia"
+msgstr "Hierarchy Rebuild"
+
+#: qtx-polylang-migrator/includes/admin-render.php:265
+msgid "Reparar Duplicatas Orfas"
+msgstr "Repair Orphan Duplicates"
+
+#: qtx-polylang-migrator/includes/admin-render.php:270
+msgid "Reparar Duplicatas e Reconectar Traducoes"
+msgstr "Repair Duplicates and Reconnect Translations"
+
+#: qtx-polylang-migrator/includes/admin-actions.php:198
+msgid "Sem alteracoes na hierarquia nesta execucao de reparo."
+msgstr "No hierarchy changes in this repair run."
+
+#: qtx-polylang-migrator/includes/admin-render.php:255
+msgid "Teste a navegacao multilingue"
+msgstr "Test the multilingual navigation"
+
+#: qtx-polylang-migrator/includes/admin-actions.php:75
+msgid "Tipo de arquivo invalido. Envie um arquivo .xml."
+msgstr "Invalid file type. Please upload a .xml file."
+
+#: qtx-polylang-migrator/includes/duplicate-repair-service.php:430
+#, php-format
+msgid "Traducoes conectadas com sucesso. %d grupos processados."
+msgstr "Translations connected successfully. %d groups processed."
+
+#: qtx-polylang-migrator/includes/admin-render.php:96
+msgid "Traducoes:"
+msgstr "Translations:"
+
+#: qtx-polylang-migrator/includes/admin-render.php:118
+msgid "Upload e Processamento do XML"
+msgstr "XML Upload and Processing"
+
+#: qtx-polylang-migrator/includes/admin-render.php:203
+msgid "Use a opcao \"Forcar Importacao\" para importar todos os posts (pode criar duplicatas)."
+msgstr "Use the \"Force Import\" option to import all posts (may create duplicates)."
+
+#: qtx-polylang-migrator/includes/admin-render.php:281
+msgid "Use esta tela para processar o XML do qTranslate, importar o conteudo, reconstruir a hierarquia e conectar as traducoes no padrao do Polylang."
+msgstr "Use this screen to process the qTranslate XML, import the content, rebuild the hierarchy, and connect the translations in the Polylang standard."
+
+#: qtx-polylang-migrator/includes/admin-render.php:261
+#: qtx-polylang-migrator/includes/admin-render.php:283
+msgid "Ver Paginas"
+msgstr "View Pages"
+
+#: qtx-polylang-migrator/includes/admin-render.php:254
+msgid "Verifique a estrutura de paginas no admin"
+msgstr "Check the page structure in the admin"
+
+#: qtx-polylang-migrator/includes/admin-render.php:257
+msgid "Verifique os permalinks"
+msgstr "Check the permalinks"
+
+#: qtx-polylang-migrator/includes/xml-import-service.php:77
+#, php-format
+msgid "XML carregado: %d itens encontrados."
+msgstr "XML loaded: %d items found."
+
+#: qtx-polylang-migrator/includes/bootstrap.php:282
+msgid "qTranslate -> Polylang Migrator"
+msgstr "qTranslate -> Polylang Migrator"
+
+#: qtx-polylang-migrator/includes/bootstrap.php:283
+msgid "qTranslate Migrator"
+msgstr "qTranslate Migrator"
