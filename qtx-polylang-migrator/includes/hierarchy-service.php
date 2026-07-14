@@ -112,6 +112,17 @@ function qtxpm_rebuild_hierarchy_process(): array {
 /**
  * Rebuild hierarchy for taxonomy terms.
  *
+ * Categories migrated via `qtxpm_import_wxr_post_category()` record
+ * `_pll_migration_original_id` (the original WXR `<wp:category>` term_id),
+ * `_pll_migration_parent_id` (the original parent's term_id, 0 for root
+ * categories) and `_pll_migration_lang` (the term's resolved Polylang
+ * language) as termmeta. This mirrors the post hierarchy rebuild: a broad
+ * query maps every migrated term (by original ID + language) to its new
+ * term_id, then a second query re-parents every term that declared a
+ * non-zero original parent, preferring the parent variant in the same
+ * language and falling back to any language when unavailable (see
+ * `qtxpm_resolve_parent_post_id()`, which is generic despite its name).
+ *
  * @return array{updated: int, details: array<int, string>}
  */
 function qtxpm_rebuild_term_hierarchy(): array {
@@ -122,33 +133,52 @@ function qtxpm_rebuild_term_hierarchy(): array {
 		'details' => array(),
 	);
 
-	$terms = $wpdb->get_results(
-		"SELECT t.term_id, tm_parent.meta_value as original_parent_id
+	$run_scope_join = qtxpm_get_migration_run_scope_join_for_terms( 't' );
+
+	$all_terms = $wpdb->get_results(
+		"SELECT t.term_id,
+			tm_original.meta_value as original_id,
+			tm_lang.meta_value as lang
 		FROM {$wpdb->terms} t
-		INNER JOIN {$wpdb->termmeta} tm_parent ON t.term_id = tm_parent.term_id
-		WHERE tm_parent.meta_key = '_pll_migration_parent_id'
+		INNER JOIN {$wpdb->termmeta} tm_original ON t.term_id = tm_original.term_id AND tm_original.meta_key = '_pll_migration_original_id'{$run_scope_join}
+		LEFT JOIN {$wpdb->termmeta} tm_lang ON t.term_id = tm_lang.term_id AND tm_lang.meta_key = '_pll_migration_lang'
+		WHERE tm_original.meta_value IS NOT NULL
+		AND tm_original.meta_value != '0'"
+	);
+
+	if ( empty( $all_terms ) ) {
+		return $result;
+	}
+
+	$original_to_new = qtxpm_build_original_term_language_map( $all_terms );
+
+	$child_terms = $wpdb->get_results(
+		"SELECT t.term_id,
+			tm_parent.meta_value as original_parent_id,
+			tm_lang.meta_value as lang
+		FROM {$wpdb->terms} t
+		INNER JOIN {$wpdb->termmeta} tm_parent ON t.term_id = tm_parent.term_id AND tm_parent.meta_key = '_pll_migration_parent_id'{$run_scope_join}
+		LEFT JOIN {$wpdb->termmeta} tm_lang ON t.term_id = tm_lang.term_id AND tm_lang.meta_key = '_pll_migration_lang'
+		WHERE tm_parent.meta_value IS NOT NULL
 		AND tm_parent.meta_value != '0'"
 	);
 
-	foreach ( $terms as $term ) {
-		$new_parent = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT t.term_id FROM {$wpdb->terms} t
-				INNER JOIN {$wpdb->termmeta} tm ON t.term_id = tm.term_id
-				WHERE tm.meta_key = '_pll_migration_original_id'
-				AND tm.meta_value = %d",
-				$term->original_parent_id
-			)
-		);
+	foreach ( $child_terms as $term ) {
+		$original_parent_id = (int) $term->original_parent_id;
+		$lang = isset( $term->lang ) ? (string) $term->lang : '';
+		$new_parent_id = qtxpm_resolve_parent_post_id( $original_to_new, $original_parent_id, $lang );
 
-		if ( $new_parent ) {
+		if ( $new_parent_id > 0 && $new_parent_id !== (int) $term->term_id ) {
 			$wpdb->update(
 				$wpdb->term_taxonomy,
-				array( 'parent' => $new_parent ),
+				array( 'parent' => $new_parent_id ),
 				array( 'term_id' => $term->term_id ),
 				array( '%d' ),
 				array( '%d' )
 			);
+
+			$lang_suffix = '' !== $lang ? " [{$lang}]" : '';
+			$result['details'][] = "Termo #{$term->term_id}{$lang_suffix}: pai atualizado de {$original_parent_id} para {$new_parent_id}";
 			$result['updated']++;
 		}
 	}
