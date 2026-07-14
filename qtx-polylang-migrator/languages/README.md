@@ -7,6 +7,8 @@ Arquivos atualmente versionados:
 - `qtx-polylang-migrator.pot`
 - `qtx-polylang-migrator-pt_BR.po` / `.mo`
 - `qtx-polylang-migrator-en_US.po` / `.mo`
+- `qtx-polylang-migrator-es_ES.po` / `.mo`
+- `qtx-polylang-migrator-fr_FR.po` / `.mo`
 
 O text domain do plugin é `qtx-polylang-migrator`.
 
@@ -18,6 +20,13 @@ O text domain do plugin é `qtx-polylang-migrator`.
 - **en_US** — tradução completa para inglês (EUA), incluindo mensagens de erro, rótulos da UI
   administrativa e textos de ajuda. Termos como `qTranslate`, `Polylang`, `WXR` e `XML` são mantidos
   sem tradução por serem nomes próprios/siglas técnicas.
+- **es_ES** — tradução completa para espanhol (Espanha), com terminologia alinhada às traduções
+  oficiais do WordPress em espanhol (ex.: "post" → "entrada", "draft" → "borrador"). Termos como
+  `qTranslate`, `Polylang`, `WXR` e `XML` são mantidos sem tradução.
+- **fr_FR** — tradução completa para francês (França), seguindo a tipografia francesa (espaço
+  insecável antes de `:`, `!` e `?`) e a terminologia oficial do WordPress em francês (ex.: "post" →
+  "article", "draft" → "brouillon"). Termos como `qTranslate`, `Polylang`, `WXR` e `XML` são mantidos
+  sem tradução.
 
 ## Como contribuir com uma nova tradução
 
