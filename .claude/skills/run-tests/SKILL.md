@@ -37,6 +37,14 @@ docker compose run --rm phpunit vendor/bin/phpunit --filter <NomeDaClasseOuMetod
 
 ## Solução de problemas
 
+- **Conflito de container em worktrees paralelos** (golden path verificado em 2026-07-07/10): o `docker-compose.yml` fixa `container_name: qtranslate_db`/`qtranslate_wp`. Rodar a suíte de um worktree enquanto o ambiente (ou outro worktree) usa esses containers falha com "name already in use" — e esperar/tentar de novo NÃO resolve. Solução comprovada (as suítes usam apenas stubs, não precisam do banco):
+  ```bash
+  docker compose run --rm --no-deps --build phpunit               # unitário
+  docker compose run --rm --no-deps --build phpunit-integration   # integração
+  docker compose run --rm --no-deps --build phpstan               # análise
+  docker compose run --rm --no-deps --build phpcs                 # padrões
+  ```
+  Funciona em qualquer worktree, com resultados idênticos aos do wrapper.
 - **Docker fora do ar / daemon não responde**: reporte a falha real; não conclua "testes passaram". Se o usuário permitiu, `./run-tests.sh up` sobe o ambiente (WordPress em http://localhost:8088, admin/admin).
 - **`--build` lento**: os comandos do wrapper usam `--build`; a primeira execução demora, as seguintes usam cache.
 - Sempre reporte a **saída real** do PHPUnit (contagem de testes/asserções/falhas), nunca uma suposição.
