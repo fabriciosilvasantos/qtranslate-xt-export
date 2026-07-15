@@ -4,7 +4,7 @@ Tags: migration, polylang, multilingual, import, qtranslate
 Requires at least: 6.9.4
 Tested up to: 7.0
 Requires PHP: 8.4
-Stable tag: 0.4.0
+Stable tag: 0.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -91,6 +91,12 @@ O migrador não processa os itens `wp:comment` do WXR — comentários do site d
 Os custom post types (CPTs) do site de origem só são conectados como traduções no Polylang se o tipo estiver habilitado para tradução em `Idiomas > Configurações > Tipos de post` **antes** de rodar a migração. CPTs não habilitados são importados sem idioma atribuído e ficam fora dos grupos de tradução — habilite cada CPT relevante no Polylang antes de fazer o upload do XML.
 
 == Changelog ==
+
+= 0.4.1 =
+
+* Correção: o idioma do post agora é atribuído no Polylang antes do processamento das categorias — posts recebiam termos do idioma padrão quando a categoria de conteúdo aparecia antes do marcador de idioma no XML transformado (bug detectado em teste end-to-end com WordPress real).
+* Correção: a categoria padrão do WordPress ("Sem categoria"/"Uncategorized") é substituída quando o post recebe uma categoria real migrada; posts sem categoria real a mantêm.
+* Robustez: o transformador registra os namespaces WXR canônicos (`wp`, `content`, `excerpt`, `dc`) explicitamente — arquivos que omitem declarações opcionais (ex.: `xmlns:excerpt`) não causam mais erro fatal.
 
 = 0.4.0 =
 

@@ -500,4 +500,60 @@ XML;
 		$this->assertSame( 'Configuração e ação: café, mãe, avó 🎉', $pt_post['post_title'] );
 		$this->assertSame( 'Chinese sample: 中文测试 emoji: 🎉🚀', $en_post['post_title'] );
 	}
+
+	// -------------------------------------------------------------------
+	// 5. Robustness against WXR documents missing a standard namespace
+	//    declaration (e.g. `xmlns:excerpt`) on the `<rss>` root element.
+	// -------------------------------------------------------------------
+
+	/**
+	 * Regression test: a real, well-formed WXR export that never uses
+	 * `<excerpt:encoded>` anywhere (e.g. no post has an excerpt) commonly
+	 * omits the `xmlns:excerpt` declaration entirely from its `<rss>` root,
+	 * since the prefix is simply unused. Before the fix, `qtxpm_build_wxr_xpath()`
+	 * (formerly inlined in `qtxpm_process_wxr_content()`) only registered
+	 * namespaces actually declared on `<rss>`, so `DOMXPath::query( 'excerpt:encoded', ... )`
+	 * returned `false` (unbound prefix) instead of an empty node list, and
+	 * the immediately following `->item( 0 )` call fataled with "Call to a
+	 * member function item() on bool".
+	 */
+	public function test_wxr_without_excerpt_namespace_declaration_does_not_fatal(): void {
+		$raw_xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title><![CDATA[[:pt]Título[:en]Title[:]]]></title>
+		<guid isPermaLink="false">item-1</guid>
+		<content:encoded><![CDATA[[:pt]Conteúdo[:en]Content[:]]]></content:encoded>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-01-01 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-01-01 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-01-01 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-01-01 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[item-1]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+
+		list( $result, $inserted_posts ) = $this->processAndImport( $raw_xml, array( 'pt', 'en' ), 'pt' );
+
+		$this->assertTrue( $result['success'] );
+
+		$pt_post = $this->findImportedPostByNameAndLanguage( $inserted_posts, 'item-1', 'pt' );
+		$en_post = $this->findImportedPostByNameAndLanguage( $inserted_posts, 'item-1', 'en' );
+
+		$this->assertNotNull( $pt_post );
+		$this->assertNotNull( $en_post );
+		$this->assertSame( 'Título', $pt_post['post_title'] );
+		$this->assertSame( 'Title', $en_post['post_title'] );
+		$this->assertSame( '', $pt_post['post_excerpt'] ?? '', 'Missing excerpt namespace/element must resolve to an empty excerpt, not a fatal error.' );
+	}
 }

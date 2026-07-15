@@ -4,6 +4,99 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Canonical namespace URIs for the WXR prefixes this transformer relies on.
+ *
+ * Used to pre-register these prefixes on every `DOMXPath` built for a WXR
+ * document, regardless of whether the source XML actually declares them on
+ * its `<rss>` root element. Real-world WXR exports commonly omit a prefix's
+ * `xmlns:*` declaration entirely when the corresponding elements are simply
+ * unused (e.g. no `<excerpt:encoded>` anywhere because no post has an
+ * excerpt) - which is perfectly well-formed XML, but leaves `excerpt`
+ * unbound as far as `DOMXPath` is concerned. Querying an expression with an
+ * unbound prefix makes `DOMXPath::query()` return `false` (not an empty
+ * node list), which crashes on the very common `->item( 0 )` chaining used
+ * throughout this file. Pre-binding the canonical URIs sidesteps that: the
+ * prefix always resolves to *some* URI, so queries against genuinely absent
+ * elements correctly return an empty (but truthy) node list instead of
+ * `false`.
+ *
+ * @return array<string, string> Prefix => canonical namespace URI.
+ */
+function qtxpm_wxr_default_namespaces(): array {
+	return array(
+		'wp'      => 'http://wordpress.org/export/1.2/',
+		'content' => 'http://purl.org/rss/1.0/modules/content/',
+		'excerpt' => 'http://wordpress.org/export/1.2/excerpt/',
+		'dc'      => 'http://purl.org/dc/elements/1.1/',
+	);
+}
+
+/**
+ * Build a `DOMXPath` for a WXR document with the standard `wp:`/`content:`/
+ * `excerpt:`/`dc:` prefixes always registered against their canonical
+ * namespace URIs, then overridden by whatever the document itself actually
+ * declares (in case of a non-standard mapping). See
+ * `qtxpm_wxr_default_namespaces()` for why the canonical fallback is needed.
+ *
+ * @param DOMDocument $doc DOM document loaded with WXR content.
+ * @return DOMXPath
+ */
+function qtxpm_build_wxr_xpath( DOMDocument $doc ): DOMXPath {
+	$xpath = new DOMXPath( $doc );
+
+	foreach ( qtxpm_wxr_default_namespaces() as $prefix => $uri ) {
+		$xpath->registerNamespace( $prefix, $uri );
+	}
+
+	if ( $doc->documentElement instanceof DOMElement ) {
+		foreach ( $doc->documentElement->attributes as $attr ) {
+			if ( strpos( $attr->name, 'xmlns:' ) === 0 ) {
+				$xpath->registerNamespace( substr( $attr->name, 6 ), $attr->value );
+			}
+		}
+	}
+
+	return $xpath;
+}
+
+/**
+ * Run an XPath query and safely return its first matching node, or `null`
+ * when there is no match *or* when the query itself fails (`query()`
+ * returns `false`, e.g. for an unbound namespace prefix). Guards every
+ * `->item( 0 )` call site in this file against fataling on `false`.
+ *
+ * @param DOMXPath      $xpath XPath helper.
+ * @param string        $expression XPath expression.
+ * @param DOMNode|null  $context_node Context node, or `null` to query the whole document.
+ * @return DOMNode|null
+ */
+function qtxpm_xpath_query_first( DOMXPath $xpath, string $expression, ?DOMNode $context_node = null ): ?DOMNode {
+	$result = null !== $context_node ? $xpath->query( $expression, $context_node ) : $xpath->query( $expression );
+
+	if ( false === $result || 0 === $result->length ) {
+		return null;
+	}
+
+	return $result->item( 0 );
+}
+
+/**
+ * Run an XPath query and safely return an iterable node list, or an empty
+ * array when the query itself fails (`query()` returns `false`). Guards
+ * `foreach ( $xpath->query( ... ) as ... )` call sites against fataling.
+ *
+ * @param DOMXPath      $xpath XPath helper.
+ * @param string        $expression XPath expression.
+ * @param DOMNode|null  $context_node Context node, or `null` to query the whole document.
+ * @return DOMNodeList<DOMNode>|array<int, DOMNode>
+ */
+function qtxpm_xpath_query_all( DOMXPath $xpath, string $expression, ?DOMNode $context_node = null ) {
+	$result = null !== $context_node ? $xpath->query( $expression, $context_node ) : $xpath->query( $expression );
+
+	return false === $result ? array() : $result;
+}
+
+/**
  * Process WXR content from qTranslate-XT to Polylang format.
  *
  * @param DOMDocument $doc DOM document loaded with WXR content.
@@ -12,21 +105,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return string
  */
 function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $default_lang ): string {
-	$xpath = new DOMXPath( $doc );
+	$xpath = qtxpm_build_wxr_xpath( $doc );
 	$items_data = array();
 
-	foreach ( $doc->documentElement->attributes as $attr ) {
-		if ( strpos( $attr->name, 'xmlns:' ) === 0 ) {
-			$xpath->registerNamespace( substr( $attr->name, 6 ), $attr->value );
-		}
-	}
-
 	foreach ( $doc->getElementsByTagName( 'item' ) as $item ) {
-		$wp_post_id = $xpath->query( 'wp:post_id', $item )->item( 0 );
-		$wp_post_parent = $xpath->query( 'wp:post_parent', $item )->item( 0 );
-		$wp_post_type = $xpath->query( 'wp:post_type', $item )->item( 0 );
-		$wp_menu_order = $xpath->query( 'wp:menu_order', $item )->item( 0 );
-		$guid_node = $xpath->query( 'guid', $item )->item( 0 );
+		$wp_post_id = qtxpm_xpath_query_first( $xpath, 'wp:post_id', $item );
+		$wp_post_parent = qtxpm_xpath_query_first( $xpath, 'wp:post_parent', $item );
+		$wp_post_type = qtxpm_xpath_query_first( $xpath, 'wp:post_type', $item );
+		$wp_menu_order = qtxpm_xpath_query_first( $xpath, 'wp:menu_order', $item );
+		$guid_node = qtxpm_xpath_query_first( $xpath, 'guid', $item );
 
 		$items_data[] = array(
 			'element'         => $item,
@@ -44,9 +131,9 @@ function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $
 
 	foreach ( $sorted_items as $item_data ) {
 		$item = $item_data['element'];
-		$title_node = $xpath->query( 'title', $item )->item( 0 );
-		$content_node = $xpath->query( 'content:encoded', $item )->item( 0 );
-		$excerpt_node = $xpath->query( 'excerpt:encoded', $item )->item( 0 );
+		$title_node = qtxpm_xpath_query_first( $xpath, 'title', $item );
+		$content_node = qtxpm_xpath_query_first( $xpath, 'content:encoded', $item );
+		$excerpt_node = qtxpm_xpath_query_first( $xpath, 'excerpt:encoded', $item );
 
 		$title_text = $title_node ? $title_node->textContent : '';
 		$content_text = $content_node ? $content_node->textContent : '';
@@ -78,10 +165,10 @@ function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $
 
 			foreach ( $item_languages as $lang ) {
 				$new_item = $item->cloneNode( true );
-				$new_title = $xpath->query( 'title', $new_item )->item( 0 );
-				$new_content = $xpath->query( 'content:encoded', $new_item )->item( 0 );
-				$new_excerpt = $xpath->query( 'excerpt:encoded', $new_item )->item( 0 );
-				$wp_post_parent_node = $xpath->query( 'wp:post_parent', $new_item )->item( 0 );
+				$new_title = qtxpm_xpath_query_first( $xpath, 'title', $new_item );
+				$new_content = qtxpm_xpath_query_first( $xpath, 'content:encoded', $new_item );
+				$new_excerpt = qtxpm_xpath_query_first( $xpath, 'excerpt:encoded', $new_item );
+				$wp_post_parent_node = qtxpm_xpath_query_first( $xpath, 'wp:post_parent', $new_item );
 
 				if ( $new_title ) {
 					$new_title->textContent = qtxpm_get_language_value( $title_by_lang, $lang, $default_lang, $title_text, $languages );
@@ -141,7 +228,7 @@ function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $
 		$cat_element->textContent = $default_lang;
 		$item->appendChild( $cat_element );
 
-		$wp_post_parent_node = $xpath->query( 'wp:post_parent', $item )->item( 0 );
+		$wp_post_parent_node = qtxpm_xpath_query_first( $xpath, 'wp:post_parent', $item );
 		if ( $wp_post_parent_node ) {
 			$wp_post_parent_node->textContent = '0';
 		}
@@ -206,8 +293,8 @@ function qtxpm_process_wxr_content( DOMDocument $doc, array $languages, string $
  * @return void
  */
 function qtxpm_split_postmeta_for_language( DOMXPath $xpath, DOMNode $item, string $lang, string $default_lang, array $languages ): void {
-	foreach ( $xpath->query( 'wp:postmeta', $item ) as $meta_node ) {
-		$value_node = $xpath->query( 'wp:meta_value', $meta_node )->item( 0 );
+	foreach ( qtxpm_xpath_query_all( $xpath, 'wp:postmeta', $item ) as $meta_node ) {
+		$value_node = qtxpm_xpath_query_first( $xpath, 'wp:meta_value', $meta_node );
 
 		if ( ! $value_node ) {
 			continue;

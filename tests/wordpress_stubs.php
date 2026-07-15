@@ -23,6 +23,23 @@ if ( ! function_exists( 'wp_insert_post' ) ) {
 		$postarr['ID'] = $current_post_id;
 		$GLOBALS['qtx_wp_inserted_posts'][ $current_post_id ] = $postarr;
 
+		// Mirrors real WordPress core: `wp_insert_post()` internally calls
+		// `wp_set_post_categories()`, which assigns the site's default
+		// category (`get_option( 'default_category' )`) to any new
+		// `post`-type post created without an explicit `post_category`
+		// argument -- exactly how every post is imported by the migrator.
+		// Tests populate `qtx_wp_options['default_category']` (and a
+		// matching entry in `qtx_wp_terms`) to exercise the real-world
+		// scenario where importing a genuine category must replace this
+		// default term instead of merely appending to it.
+		$post_type = (string) ( $postarr['post_type'] ?? 'post' );
+		if ( 'post' === $post_type && ! isset( $postarr['post_category'] ) ) {
+			$default_category_id = (int) get_option( 'default_category', 0 );
+			if ( $default_category_id > 0 ) {
+				wp_set_object_terms( $current_post_id, array( $default_category_id ), 'category', false );
+			}
+		}
+
 		return $current_post_id;
 	}
 }
