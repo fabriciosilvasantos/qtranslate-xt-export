@@ -2,29 +2,14 @@ name: Tests
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master]
   pull_request:
-    branches: [main, develop]
+    branches: [master]
 
 jobs:
   phpunit:
     name: PHPUnit Tests
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wordpress_test
-          MYSQL_USER: wordpress
-          MYSQL_PASSWORD: wordpress
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-        ports:
-          - 3306:3306
 
     steps:
       - name: Checkout
@@ -34,43 +19,17 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mysqli, pdo, pdo_mysql, intl
-          coverage: xdebug
+          extensions: intl
+          coverage: none
 
       - name: Install dependencies
         run: composer install --no-interaction
 
-      - name: Prepare WordPress test environment
-        run: |
-          export WP_TESTS_DIR=/tmp/wordpress-tests
-          mkdir -p $WP_TESTS_DIR
-          svn co --quiet https://develop.svn.wordpress.org/tags/6.4.3/tests/phpunit/includes/ $WP_TESTS_DIR/includes
-          svn co --quiet https://develop.svn.wordpress.org/tags/6.4.3/tests/phpunit/data/ $WP_TESTS_DIR/data
-
-      - name: Create WordPress test config
-        run: |
-          cp /tmp/wordpress-tests/includes/wp-tests-config-sample.php /tmp/wordpress-tests/wp-tests-config.php
-          sed -i "s|dirname( __FILE__ ) . '/src';|/tmp/wordpress-tests/src';|" /tmp/wordpress-tests/wp-tests-config.php
-          sed -i "s|your-database-name|wordpress_test|" /tmp/wordpress-tests/wp-tests-config.php
-          sed -i "s|username|wordpress|" /tmp/wordpress-tests/wp-tests-config.php
-          sed -i "s|password|wordpress|" /tmp/wordpress-tests/wp-tests-config.php
-          sed -i "s|localhost:3306|127.0.0.1:3306|" /tmp/wordpress-tests/wp-tests-config.php
-          echo "define( 'WP_DEBUG', false );" >> /tmp/wordpress-tests/wp-tests-config.php
-
-      - name: Run PHPUnit
+      - name: Run unit tests
         run: ./vendor/bin/phpunit --configuration phpunit.xml.dist
 
-      - name: Run PHPUnit with coverage
-        if: github.event_name == 'pull_request'
-        run: ./vendor/bin/phpunit --configuration phpunit.xml.dist --coverage-clover coverage.xml
-
-      - name: Upload coverage
-        if: github.event_name == 'pull_request'
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          flags: unittests
-          name: qtranslate-xt
+      - name: Run integration tests
+        run: ./vendor/bin/phpunit --configuration phpunit-integration.xml.dist
 
   phpstan:
     name: PHPStan Analysis
@@ -84,13 +43,14 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: mysqli, pdo, pdo_mysql, intl
+          extensions: intl
+          coverage: none
 
       - name: Install dependencies
         run: composer install --no-interaction
 
       - name: Run PHPStan
-        run: ./vendor/bin/phpstan analyse -c phpstan.neon.dist
+        run: ./vendor/bin/phpstan analyse -c phpstan.neon.dist --memory-limit=2G --no-progress
 
   phpcs:
     name: PHPCS Code Style
@@ -104,6 +64,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
+          coverage: none
 
       - name: Install dependencies
         run: composer install --no-interaction
