@@ -15,7 +15,7 @@ function qtxpm_render_migration_page(): void {
 	$labels = qtxpm_get_migration_labels();
 
 	if ( 'results' === $current_step ) {
-		delete_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
+		qtxpm_delete_staged_xml();
 		delete_transient( qtxpm_get_migration_transient_key( 'import_report' ) );
 		delete_transient( qtxpm_get_migration_transient_key( 'migration_results' ) );
 	}
@@ -62,6 +62,16 @@ function qtxpm_render_import_notices( array|false $import_result ): void {
 			<div style="background: #ffebeb; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">
 				<?php foreach ( $import_result['errors'] as $error ) : ?>
 					<div style="margin-bottom: 5px; font-family: monospace; font-size: 13px; color: #d63638;"><?php echo esc_html( $error ); ?></div>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	<?php endif; ?>
+	<?php if ( ! empty( $import_result['warnings'] ) ) : ?>
+		<div class="card" style="margin-top: 20px;">
+			<h3><?php echo esc_html__( 'Avisos', 'qtx-polylang-migrator' ); ?></h3>
+			<div style="background: #fff8e5; padding: 15px; border-radius: 4px; max-height: 300px; overflow-y: auto;">
+				<?php foreach ( $import_result['warnings'] as $warning ) : ?>
+					<div style="margin-bottom: 5px; font-family: monospace; font-size: 13px;"><?php echo esc_html( $warning ); ?></div>
 				<?php endforeach; ?>
 			</div>
 		</div>

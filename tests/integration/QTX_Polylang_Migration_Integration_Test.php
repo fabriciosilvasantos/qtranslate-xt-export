@@ -1344,4 +1344,506 @@ XML;
 			$wpdb = $original_wpdb;
 		}
 	}
+
+	// ------------------------------------------------------------------
+	// B1 — dc:creator -> post_author preservation.
+	// ------------------------------------------------------------------
+
+	private function buildAuthorWxr( string $creator ): string {
+		return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/"
+	xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel>
+	<item>
+		<title>Pagina com Autor</title>
+		<dc:creator><![CDATA[{$creator}]]></dc:creator>
+		<guid isPermaLink="false">pagina-autor</guid>
+		<content:encoded><![CDATA[Conteudo]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="language" nicename="pt">pt</category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[pagina-autor]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+	}
+
+	public function test_direct_import_assigns_post_author_when_creator_matches_existing_user(): void {
+		if ( ! function_exists( 'qtxpm_direct_xml_import' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$GLOBALS['qtx_wp_users'] = array(
+			(object) array(
+				'ID'            => 42,
+				'user_login'    => 'joana',
+				'user_nicename' => 'joana',
+				'user_email'    => 'joana@example.com',
+			),
+		);
+
+		$temp_file = tempnam( sys_get_temp_dir(), 'qtx-wxr-' );
+		file_put_contents( $temp_file, $this->buildAuthorWxr( 'joana' ) );
+
+		try {
+			$result = qtxpm_direct_xml_import( $temp_file, true );
+			$inserted_posts = qtx_wordpress_stub_get_inserted_posts();
+
+			$this->assertTrue( $result['success'] );
+			$this->assertSame( 42, (int) ( $inserted_posts[1]['post_author'] ?? 0 ) );
+			$this->assertArrayNotHasKey( '_pll_migration_original_author', $GLOBALS['qtx_wp_post_meta'][1] ?? array() );
+
+			$matched_details = array_filter(
+				$result['details'],
+				static fn( string $detail ): bool => false !== strpos( $detail, 'joana' ) && false !== strpos( $detail, 'login' )
+			);
+			$this->assertNotEmpty( $matched_details, 'A detail entry recording the author match by "login" is expected.' );
+			$this->assertEmpty( $result['warnings'], 'No warning is expected when the author resolves successfully.' );
+		} finally {
+			@unlink( $temp_file );
+		}
+	}
+
+	public function test_direct_import_records_original_author_meta_when_creator_has_no_matching_user(): void {
+		if ( ! function_exists( 'qtxpm_direct_xml_import' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$GLOBALS['qtx_wp_users'] = array();
+
+		$temp_file = tempnam( sys_get_temp_dir(), 'qtx-wxr-' );
+		file_put_contents( $temp_file, $this->buildAuthorWxr( 'autor-inexistente' ) );
+
+		try {
+			$result = qtxpm_direct_xml_import( $temp_file, true );
+			$inserted_posts = qtx_wordpress_stub_get_inserted_posts();
+
+			$this->assertTrue( $result['success'] );
+			$this->assertArrayNotHasKey( 'post_author', $inserted_posts[1] );
+			$this->assertSame(
+				'autor-inexistente',
+				$GLOBALS['qtx_wp_post_meta'][1]['_pll_migration_original_author'] ?? null
+			);
+
+			$matched_warnings = array_filter(
+				$result['warnings'],
+				static fn( string $warning ): bool => false !== strpos( $warning, 'autor-inexistente' )
+			);
+			$this->assertNotEmpty( $matched_warnings, 'A warning about the unresolved author is expected.' );
+		} finally {
+			@unlink( $temp_file );
+		}
+	}
+
+	public function test_direct_import_without_dc_creator_does_not_set_author_or_meta(): void {
+		if ( ! function_exists( 'qtxpm_direct_xml_import' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>Pagina sem autor</title>
+		<guid isPermaLink="false">pagina-sem-autor</guid>
+		<content:encoded><![CDATA[Conteudo]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="language" nicename="pt">pt</category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[pagina-sem-autor]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$temp_file = tempnam( sys_get_temp_dir(), 'qtx-wxr-' );
+		file_put_contents( $temp_file, $xml );
+
+		try {
+			$result = qtxpm_direct_xml_import( $temp_file, true );
+			$inserted_posts = qtx_wordpress_stub_get_inserted_posts();
+
+			$this->assertTrue( $result['success'] );
+			$this->assertArrayNotHasKey( 'post_author', $inserted_posts[1] );
+			$this->assertArrayNotHasKey( '_pll_migration_original_author', $GLOBALS['qtx_wp_post_meta'][1] ?? array() );
+		} finally {
+			@unlink( $temp_file );
+		}
+	}
+
+	// ------------------------------------------------------------------
+	// B2 — per-language postmeta splitting + serialized-meta safety.
+	// ------------------------------------------------------------------
+
+	public function test_process_wxr_content_splits_multilingual_postmeta_per_language_clone(): void {
+		if ( ! function_exists( 'qtxpm_process_wxr_content' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title><![CDATA[[:en]About[:pt]Sobre[:]]]></title>
+		<guid isPermaLink="false">page-meta-1</guid>
+		<content:encoded><![CDATA[[:en]English body[:pt]Corpo em portugues[:]]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:postmeta>
+			<wp:meta_key>subtitle</wp:meta_key>
+			<wp:meta_value><![CDATA[[:en]English subtitle[:pt]Subtitulo em portugues[:]]]></wp:meta_value>
+		</wp:postmeta>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$doc = new DOMDocument();
+		$doc->loadXML( $xml );
+
+		$processed = qtxpm_process_wxr_content( $doc, array( 'en', 'pt' ), 'en' );
+
+		$processed_doc = new DOMDocument();
+		$processed_doc->loadXML( $processed );
+
+		$this->assertStringNotContainsString( '[:en]', $processed );
+		$this->assertStringNotContainsString( '[:pt]', $processed );
+		$this->assertStringContainsString( 'English subtitle', $processed );
+		$this->assertStringContainsString( 'Subtitulo em portugues', $processed );
+
+		$items = $processed_doc->getElementsByTagName( 'item' );
+		$this->assertSame( 2, $items->length );
+
+		$meta_values_by_item = array();
+		foreach ( $items as $item_index => $item_node ) {
+			foreach ( $item_node->getElementsByTagName( 'meta_key' ) as $meta_key_node ) {
+				if ( 'subtitle' === $meta_key_node->textContent ) {
+					$meta_value_node = $meta_key_node->parentNode->getElementsByTagName( 'meta_value' )->item( 0 );
+					$meta_values_by_item[ $item_index ] = $meta_value_node ? $meta_value_node->textContent : null;
+				}
+			}
+		}
+
+		$this->assertContains( 'English subtitle', $meta_values_by_item );
+		$this->assertContains( 'Subtitulo em portugues', $meta_values_by_item );
+	}
+
+	public function test_process_wxr_content_leaves_serialized_postmeta_with_markers_untouched(): void {
+		if ( ! function_exists( 'qtxpm_process_wxr_content' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$serialized_value = 'a:1:{s:5:"label";s:33:"[:en]English label[:pt]Rotulo[:]";}';
+
+		$xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title><![CDATA[[:en]About[:pt]Sobre[:]]]></title>
+		<guid isPermaLink="false">page-meta-2</guid>
+		<content:encoded><![CDATA[[:en]English body[:pt]Corpo em portugues[:]]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<wp:post_id>2</wp:post_id>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:postmeta>
+			<wp:meta_key>serialized_field</wp:meta_key>
+			<wp:meta_value><![CDATA[{$serialized_value}]]></wp:meta_value>
+		</wp:postmeta>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$doc = new DOMDocument();
+		$doc->loadXML( $xml );
+
+		$processed = qtxpm_process_wxr_content( $doc, array( 'en', 'pt' ), 'en' );
+
+		$processed_doc = new DOMDocument();
+		$processed_doc->loadXML( $processed );
+
+		$items = $processed_doc->getElementsByTagName( 'item' );
+		$this->assertSame( 2, $items->length );
+
+		foreach ( $items as $item_node ) {
+			foreach ( $item_node->getElementsByTagName( 'meta_key' ) as $meta_key_node ) {
+				if ( 'serialized_field' === $meta_key_node->textContent ) {
+					$meta_value_node = $meta_key_node->parentNode->getElementsByTagName( 'meta_value' )->item( 0 );
+					$this->assertSame( $serialized_value, $meta_value_node->textContent );
+				}
+			}
+		}
+	}
+
+	public function test_direct_import_warns_about_serialized_postmeta_still_containing_markers(): void {
+		if ( ! function_exists( 'qtxpm_direct_xml_import' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$serialized_value = 'a:1:{s:5:"label";s:33:"[:en]English label[:pt]Rotulo[:]";}';
+
+		$xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>Pagina com meta serializada</title>
+		<guid isPermaLink="false">pagina-meta-serializada</guid>
+		<content:encoded><![CDATA[Conteudo]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="language" nicename="pt">pt</category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[pagina-meta-serializada]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+		<wp:postmeta>
+			<wp:meta_key>serialized_field</wp:meta_key>
+			<wp:meta_value><![CDATA[{$serialized_value}]]></wp:meta_value>
+		</wp:postmeta>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$temp_file = tempnam( sys_get_temp_dir(), 'qtx-wxr-' );
+		file_put_contents( $temp_file, $xml );
+
+		try {
+			$result = qtxpm_direct_xml_import( $temp_file, true );
+
+			$this->assertTrue( $result['success'] );
+			$this->assertNotEmpty( $result['warnings'] );
+			$this->assertStringContainsString( 'serialized_field', $result['warnings'][0] );
+			$this->assertSame(
+				$serialized_value,
+				$GLOBALS['qtx_wp_post_meta'][1]['serialized_field'] ?? null
+			);
+		} finally {
+			@unlink( $temp_file );
+		}
+	}
+
+	public function test_raw_blocks_guard_ignores_serialized_postmeta_but_catches_plain_postmeta(): void {
+		if ( ! function_exists( 'qtxpm_wxr_has_raw_multilingual_blocks' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$serialized_value = 'a:1:{s:5:"label";s:33:"[:en]English label[:pt]Rotulo[:]";}';
+
+		$serialized_only_xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>Pagina processada</title>
+		<guid isPermaLink="false">pagina-processada</guid>
+		<content:encoded><![CDATA[Conteudo ja processado]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+		<wp:postmeta>
+			<wp:meta_key>serialized_field</wp:meta_key>
+			<wp:meta_value><![CDATA[{$serialized_value}]]></wp:meta_value>
+		</wp:postmeta>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$xml = simplexml_load_string( $serialized_only_xml );
+		$this->assertFalse( qtxpm_wxr_has_raw_multilingual_blocks( $xml ) );
+
+		$plain_raw_meta_xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>Pagina nao processada</title>
+		<guid isPermaLink="false">pagina-nao-processada</guid>
+		<content:encoded><![CDATA[Conteudo ja processado]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<wp:post_type><![CDATA[page]]></wp:post_type>
+		<wp:postmeta>
+			<wp:meta_key>subtitle</wp:meta_key>
+			<wp:meta_value><![CDATA[[:en]English subtitle[:pt]Subtitulo em portugues[:]]]></wp:meta_value>
+		</wp:postmeta>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$xml = simplexml_load_string( $plain_raw_meta_xml );
+		$this->assertTrue( qtxpm_wxr_has_raw_multilingual_blocks( $xml ) );
+	}
+
+	// ------------------------------------------------------------------
+	// B3a — qtxpm_get_polylang_languages() per-request memoization.
+	// ------------------------------------------------------------------
+
+	public function test_get_polylang_languages_is_memoized_until_force_refresh(): void {
+		if ( ! function_exists( 'qtxpm_get_polylang_languages' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$first_call = qtxpm_get_polylang_languages();
+		$this->assertContains( 'en', $first_call );
+
+		// Mutate the underlying Polylang stub state directly (bypassing the
+		// migrator's own bookkeeping) to prove the *cached* value is what is
+		// returned on the next call, not a freshly recomputed one.
+		$GLOBALS['qtx_polylang_languages']['de'] = (object) array( 'slug' => 'de', 'locale' => 'de_DE' );
+
+		$cached_call = qtxpm_get_polylang_languages();
+		$this->assertNotContains( 'de', $cached_call, 'Cached result must not reflect the out-of-band mutation.' );
+
+		$refreshed_call = qtxpm_get_polylang_languages( true );
+		$this->assertContains( 'de', $refreshed_call, 'Forced refresh must recompute and pick up the new language.' );
+	}
+
+	public function test_ensure_polylang_language_invalidates_cache_after_provisioning_new_language(): void {
+		if ( ! function_exists( 'qtxpm_ensure_polylang_language' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		// Prime the cache without 'fr'.
+		$primed = qtxpm_get_polylang_languages();
+		$this->assertNotContains( 'fr', $primed );
+
+		qtxpm_ensure_polylang_language( 'fr' );
+
+		$after_provisioning = qtxpm_get_polylang_languages();
+		$this->assertContains( 'fr', $after_provisioning, 'Cache must be invalidated once a new language is provisioned.' );
+	}
+
+	// ------------------------------------------------------------------
+	// B3b — O(n) hierarchy sort: equivalence with the previous O(n^2) contract.
+	// ------------------------------------------------------------------
+
+	public function test_sort_items_by_hierarchy_handles_multiple_subtrees_and_deep_nesting(): void {
+		if ( ! function_exists( 'qtxpm_sort_items_by_hierarchy' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		// Two independent root subtrees, each several levels deep, with
+		// siblings intentionally out of menu_order to exercise per-parent
+		// sorting in the new indexed implementation.
+		$items = array(
+			array( 'original_id' => 10, 'original_parent' => 0, 'menu_order' => 1 ),
+			array( 'original_id' => 1, 'original_parent' => 0, 'menu_order' => 0 ),
+			array( 'original_id' => 11, 'original_parent' => 1, 'menu_order' => 1 ),
+			array( 'original_id' => 12, 'original_parent' => 1, 'menu_order' => 0 ),
+			array( 'original_id' => 111, 'original_parent' => 11, 'menu_order' => 0 ),
+			array( 'original_id' => 121, 'original_parent' => 12, 'menu_order' => 0 ),
+			array( 'original_id' => 101, 'original_parent' => 10, 'menu_order' => 0 ),
+		);
+
+		$sorted = qtxpm_sort_items_by_hierarchy( $items );
+		$ids = array_column( $sorted, 'original_id' );
+
+		// Root 1 (menu_order 0) before root 10 (menu_order 1); within root 1,
+		// child 12 (menu_order 0) before child 11 (menu_order 1), each
+		// immediately followed by its own child (depth-first).
+		$this->assertSame( array( 1, 12, 121, 11, 111, 10, 101 ), $ids );
+	}
+
+	public function test_index_items_by_parent_groups_and_sorts_each_bucket(): void {
+		if ( ! function_exists( 'qtxpm_index_items_by_parent' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		$items = array(
+			array( 'original_id' => 20, 'original_parent' => 5, 'menu_order' => 0 ),
+			array( 'original_id' => 10, 'original_parent' => 5, 'menu_order' => 0 ),
+			array( 'original_id' => 1, 'original_parent' => 0, 'menu_order' => 0 ),
+		);
+
+		$index = qtxpm_index_items_by_parent( $items );
+
+		$this->assertSame( array( 1 ), array_column( $index[0], 'original_id' ) );
+		$this->assertSame( array( 10, 20 ), array_column( $index[5], 'original_id' ) );
+	}
+
+	// ------------------------------------------------------------------
+	// B3c — staged XML storage is not autoloaded.
+	// ------------------------------------------------------------------
+
+	public function test_staged_xml_round_trips_via_non_autoloaded_option(): void {
+		if ( ! function_exists( 'qtxpm_set_staged_xml' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		qtxpm_set_staged_xml( '<rss>processed</rss>', 3600 );
+
+		$this->assertSame( '<rss>processed</rss>', qtxpm_get_staged_xml() );
+
+		$stored = $GLOBALS['qtx_wp_options'][ qtxpm_get_staged_xml_option_name() ] ?? null;
+		$this->assertIsArray( $stored );
+		$this->assertArrayHasKey( 'value', $stored );
+		$this->assertArrayHasKey( 'expires_at', $stored );
+
+		qtxpm_delete_staged_xml();
+		$this->assertFalse( qtxpm_get_staged_xml() );
+	}
+
+	public function test_staged_xml_expires_after_ttl(): void {
+		if ( ! function_exists( 'qtxpm_set_staged_xml' ) ) {
+			self::loadMigrationEngine();
+		}
+
+		qtxpm_set_staged_xml( '<rss>expired</rss>', -1 );
+
+		$this->assertFalse( qtxpm_get_staged_xml() );
+	}
 }

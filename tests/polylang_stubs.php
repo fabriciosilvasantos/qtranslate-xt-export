@@ -137,6 +137,44 @@ if ( ! function_exists( 'pll_save_post_translations' ) ) {
 	}
 }
 
+if ( ! function_exists( 'pll_set_term_language' ) ) {
+	function pll_set_term_language( int $term_id, string $language_code ) {
+		$GLOBALS['qtx_polylang_term_languages'][ $term_id ] = $language_code;
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'pll_get_term_language' ) ) {
+	function pll_get_term_language( int $term_id, $field = 'slug' ) {
+		return $GLOBALS['qtx_polylang_term_languages'][ $term_id ] ?? '';
+	}
+}
+
+if ( ! function_exists( 'pll_save_term_translations' ) ) {
+	function pll_save_term_translations( array $translations ) {
+		$GLOBALS['qtx_polylang_saved_term_translations'][] = $translations;
+
+		foreach ( $translations as $language => $term_id ) {
+			$GLOBALS['qtx_polylang_term_translation_groups'][ (int) $term_id ] = $translations;
+		}
+
+		return true;
+	}
+}
+
+if ( ! function_exists( 'pll_get_term_translations' ) ) {
+	function pll_get_term_translations( int $term_id ) {
+		if ( isset( $GLOBALS['qtx_polylang_term_translation_groups'][ $term_id ] ) ) {
+			return $GLOBALS['qtx_polylang_term_translation_groups'][ $term_id ];
+		}
+
+		$language = $GLOBALS['qtx_polylang_term_languages'][ $term_id ] ?? '';
+
+		return '' !== $language ? array( $language => $term_id ) : array();
+	}
+}
+
 if ( ! function_exists( 'qtx_polylang_stub_reset' ) ) {
 	function qtx_polylang_stub_reset(): void {
 		$GLOBALS['qtx_polylang_languages'] = array(
@@ -152,6 +190,22 @@ if ( ! function_exists( 'qtx_polylang_stub_reset' ) ) {
 		$GLOBALS['qtx_polylang_visible_language_slugs'] = array();
 		$GLOBALS['qtx_polylang_instance'] = null;
 		$GLOBALS['qtxpm_runtime_polylang_languages'] = array();
+		$GLOBALS['qtx_polylang_term_languages'] = array();
+		$GLOBALS['qtx_polylang_saved_term_translations'] = array();
+		$GLOBALS['qtx_polylang_term_translation_groups'] = array();
+		$GLOBALS['qtxpm_runtime_term_groups'] = array();
+
+		// qtxpm_get_polylang_languages() memoizes its result in a `static`
+		// local for the lifetime of the PHP process; without invalidating it
+		// here, tests running later in the same process would see a stale
+		// language list cached by an earlier test. This only clears the
+		// cache (lazy) rather than eagerly recomputing it, so tests that set
+		// up their own scenario *after* this reset (e.g. simulating a stale
+		// public Polylang language list) are not short-circuited by a
+		// snapshot taken before their scenario existed.
+		if ( function_exists( 'qtxpm_reset_polylang_languages_cache' ) ) {
+			qtxpm_reset_polylang_languages_cache();
+		}
 	}
 }
 

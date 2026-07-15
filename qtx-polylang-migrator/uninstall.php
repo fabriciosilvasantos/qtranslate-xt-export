@@ -5,6 +5,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 delete_transient( 'qtxpm_staged_xml' );
+delete_option( 'qtxpm_staged_xml_data' );
 delete_transient( 'qtxpm_import_report' );
 delete_transient( 'qtxpm_migration_results' );
 delete_option( 'qtxpm_current_migration_run' );

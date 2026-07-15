@@ -4,11 +4,66 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Internal accessor for the per-request Polylang languages cache used by
+ * `qtxpm_get_polylang_languages()`.
+ *
+ * Kept as a single `static`-backed accessor (rather than one static per
+ * function) so the cache can be cleared from outside without forcing an
+ * immediate recomputation — `qtxpm_reset_polylang_languages_cache()` clears
+ * it lazily (the next real call recomputes from whatever state exists at
+ * that time), while `qtxpm_get_polylang_languages( true )` recomputes and
+ * repopulates it immediately, which is what `qtxpm_ensure_polylang_language()`
+ * needs right after it actually provisions a new language.
+ *
+ * @param string      $mode  'get' returns the cached value (or null), 'set' replaces it, 'clear' invalidates it.
+ * @param string[]|null $value New cached value when `$mode === 'set'`.
+ * @return string[]|null
+ */
+function qtxpm_polylang_languages_cache( string $mode, ?array $value = null ): ?array {
+	static $cache = null;
+
+	if ( 'set' === $mode ) {
+		$cache = $value;
+	} elseif ( 'clear' === $mode ) {
+		$cache = null;
+	}
+
+	return $cache;
+}
+
+/**
+ * Invalidate the per-request `qtxpm_get_polylang_languages()` cache without
+ * recomputing it. Intended for test/reset helpers so the next real call
+ * recomputes from whatever state exists at that point, instead of eagerly
+ * locking in a snapshot of the current (possibly not-yet-final) state.
+ *
+ * @return void
+ */
+function qtxpm_reset_polylang_languages_cache(): void {
+	qtxpm_polylang_languages_cache( 'clear' );
+}
+
+/**
  * Return available Polylang language slugs.
  *
+ * The result is memoized for the duration of the request (a single
+ * migration run may call this dozens of times while resolving languages
+ * for every WXR item). Pass `$force_refresh = true` to recompute and
+ * replace the cached value — used by `qtxpm_ensure_polylang_language()`
+ * right after provisioning a new language, so callers immediately see it
+ * without waiting for the next uncached call.
+ *
+ * @param bool $force_refresh Whether to bypass and refresh the memoized value.
  * @return string[]
  */
-function qtxpm_get_polylang_languages(): array {
+function qtxpm_get_polylang_languages( bool $force_refresh = false ): array {
+	if ( ! $force_refresh ) {
+		$cached_languages = qtxpm_polylang_languages_cache( 'get' );
+		if ( null !== $cached_languages ) {
+			return $cached_languages;
+		}
+	}
+
 	$languages = array();
 
 	if ( function_exists( 'pll_languages_list' ) ) {
@@ -59,7 +114,10 @@ function qtxpm_get_polylang_languages(): array {
 		(array) $languages
 	);
 
-	return array_values( array_unique( array_filter( $languages ) ) );
+	$resolved_languages = array_values( array_unique( array_filter( $languages ) ) );
+	qtxpm_polylang_languages_cache( 'set', $resolved_languages );
+
+	return $resolved_languages;
 }
 
 /**
@@ -176,6 +234,7 @@ function qtxpm_ensure_polylang_language( string $language_code, bool $set_defaul
 	}
 
 	qtxpm_remember_runtime_polylang_language( $language_code );
+	qtxpm_get_polylang_languages( true );
 
 	return $language_code;
 }
@@ -301,4 +360,300 @@ function qtxpm_is_translated_post_type( string $post_type ): bool {
 	}
 
 	return in_array( $post_type, array( 'post', 'page' ), true );
+}
+
+/**
+ * Map a WXR `<category domain="...">` value to the corresponding WordPress taxonomy.
+ *
+ * Empty domains are treated as `category` for backward compatibility with
+ * legacy exports that omit the attribute (mirrors historical migrator
+ * behavior, which only ever assigned the `category` taxonomy in that case).
+ *
+ * @param string $domain WXR category domain attribute.
+ * @return string Taxonomy slug, or empty string when the domain is not a migratable taxonomy.
+ */
+function qtxpm_map_wxr_category_domain_to_taxonomy( string $domain ): string {
+	$domain = strtolower( trim( $domain ) );
+
+	if ( '' === $domain ) {
+		return 'category';
+	}
+
+	$map = array(
+		'category' => 'category',
+		'post_tag' => 'post_tag',
+	);
+
+	return $map[ $domain ] ?? '';
+}
+
+/**
+ * Return the runtime cache of multilingual term groups created during this
+ * request, keyed by group signature and then by language (or `_mono` for
+ * language-less terms).
+ *
+ * @param string $group_key Term group signature.
+ * @return array<string, int>
+ */
+function qtxpm_get_runtime_term_group( string $group_key ): array {
+	$groups = $GLOBALS['qtxpm_runtime_term_groups'] ?? array();
+
+	return is_array( $groups[ $group_key ] ?? null ) ? $groups[ $group_key ] : array();
+}
+
+/**
+ * Remember a term created for a given group/language during this request, so
+ * that subsequent posts referencing the same original taxonomy term reuse it
+ * instead of creating duplicates.
+ *
+ * @param string $group_key Term group signature.
+ * @param string $language_key Resolved language slug, or `_mono` for language-less terms.
+ * @param int    $term_id Created/reused term ID.
+ * @return void
+ */
+function qtxpm_remember_runtime_term_group( string $group_key, string $language_key, int $term_id ): void {
+	if ( ! isset( $GLOBALS['qtxpm_runtime_term_groups'] ) || ! is_array( $GLOBALS['qtxpm_runtime_term_groups'] ) ) {
+		$GLOBALS['qtxpm_runtime_term_groups'] = array();
+	}
+
+	$GLOBALS['qtxpm_runtime_term_groups'][ $group_key ][ $language_key ] = $term_id;
+}
+
+/**
+ * Find an existing term for the given taxonomy/name/language, or create it.
+ *
+ * When a term with the same name already exists in the taxonomy, it is
+ * reused as long as it has no assigned Polylang language yet (in which case
+ * the requested language is assigned to it) or already matches the requested
+ * language. This avoids creating duplicate terms across posts that share the
+ * same category/tag.
+ *
+ * @param string $taxonomy Taxonomy slug (`category` or `post_tag`).
+ * @param string $name Term display name for this language.
+ * @param string $nicename Slug hint carried over from the WXR category element.
+ * @param string $language Resolved Polylang language slug (empty for monolingual terms).
+ * @return int Term ID, or 0 on failure.
+ */
+function qtxpm_find_or_create_migrated_term( string $taxonomy, string $name, string $nicename, string $language ): int {
+	$name = trim( $name );
+	if ( '' === $name || ! function_exists( 'wp_insert_term' ) ) {
+		return 0;
+	}
+
+	$existing = function_exists( 'get_term_by' ) ? get_term_by( 'name', $name, $taxonomy ) : false;
+	if ( is_object( $existing ) && isset( $existing->term_id ) ) {
+		$existing_term_id = (int) $existing->term_id;
+		$existing_language = function_exists( 'pll_get_term_language' )
+			? (string) pll_get_term_language( $existing_term_id, 'slug' )
+			: '';
+
+		if ( '' === $existing_language || '' === $language || $existing_language === $language ) {
+			if ( '' === $existing_language && '' !== $language && function_exists( 'pll_set_term_language' ) ) {
+				pll_set_term_language( $existing_term_id, $language );
+			}
+
+			return $existing_term_id;
+		}
+	}
+
+	$slug_hint = '' !== $nicename ? $nicename : $name;
+	$slug = '' !== $language && function_exists( 'sanitize_title' )
+		? sanitize_title( $slug_hint . '-' . $language )
+		: ( function_exists( 'sanitize_title' ) ? sanitize_title( $slug_hint ) : $slug_hint );
+
+	$inserted = wp_insert_term( $name, $taxonomy, array( 'slug' => $slug ) );
+
+	if ( is_wp_error( $inserted ) ) {
+		$existing_term_id = $inserted->get_error_data( 'term_exists' );
+		if ( is_numeric( $existing_term_id ) ) {
+			$existing_term_id = (int) $existing_term_id;
+			if ( '' !== $language && function_exists( 'pll_set_term_language' ) ) {
+				$current_language = function_exists( 'pll_get_term_language' )
+					? (string) pll_get_term_language( $existing_term_id, 'slug' )
+					: '';
+				if ( '' === $current_language ) {
+					pll_set_term_language( $existing_term_id, $language );
+				}
+			}
+
+			return $existing_term_id;
+		}
+
+		return 0;
+	}
+
+	if ( ! is_array( $inserted ) || empty( $inserted['term_id'] ) ) {
+		return 0;
+	}
+
+	$term_id = (int) $inserted['term_id'];
+
+	if ( '' !== $language && function_exists( 'pll_set_term_language' ) ) {
+		pll_set_term_language( $term_id, $language );
+	}
+
+	return $term_id;
+}
+
+/**
+ * Import a single WXR `<category>` element (taxonomy domain, e.g. `category`
+ * or `post_tag`) for a migrated post.
+ *
+ * Legacy qTranslate-XT WXR exports keep taxonomy term names inline in the
+ * qTranslate block format (e.g. `[:pt]Noticias[:en]News[:]`) because the
+ * `<category>` element is cloned unchanged into every per-language post item
+ * produced by the transformer. This function splits that name per language,
+ * creates/reuses one WordPress term per language, links the variants as
+ * Polylang term translations, and assigns to the post only the term that
+ * matches its own language. Monolingual category names create/reuse a single
+ * term with no translation group.
+ *
+ * When the multilingual category text has no block for the post's own
+ * language (e.g. `[:pt]Noticias[:]` on an `en` post), a term for that
+ * missing language is created using the best available name (the first
+ * language variant found in the text), connected to the existing
+ * translation group, and assigned to the post — instead of silently
+ * falling back to a term from a different language. A warning describing
+ * the substitution is included in the returned array so the caller can
+ * surface it to the user.
+ *
+ * @param int                   $post_id Migrated post ID.
+ * @param SimpleXMLElement      $category WXR `<category>` element.
+ * @param string                $post_language Resolved language of the migrated post (qTranslate code, e.g. `pt`/`pb`).
+ * @param array<string, array{term_id: int, parent_nicename: string, name: string}> $category_hierarchy Channel-level `<wp:category>` hierarchy map keyed by nicename.
+ * @param string                $post_title Migrated post title, used only to make warning messages traceable.
+ * @return string[] Warning messages produced while importing this category (empty when nothing noteworthy happened).
+ */
+function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $category, string $post_language, array $category_hierarchy = array(), string $post_title = '' ): array {
+	$warnings = array();
+
+	if ( $post_id <= 0 ) {
+		return $warnings;
+	}
+
+	$taxonomy = qtxpm_map_wxr_category_domain_to_taxonomy( (string) $category['domain'] );
+	if ( '' === $taxonomy ) {
+		return $warnings;
+	}
+
+	$nicename = trim( (string) $category['nicename'] );
+	$raw_text = trim( (string) $category );
+	if ( '' === $raw_text ) {
+		return $warnings;
+	}
+
+	$resolved_post_language = qtxpm_resolve_polylang_language_code( $post_language );
+
+	$hierarchy_entry = ( '' !== $nicename && isset( $category_hierarchy[ $nicename ] ) ) ? $category_hierarchy[ $nicename ] : array();
+	$original_term_id = isset( $hierarchy_entry['term_id'] ) ? (int) $hierarchy_entry['term_id'] : 0;
+	$parent_nicename = isset( $hierarchy_entry['parent_nicename'] ) ? (string) $hierarchy_entry['parent_nicename'] : '';
+	$original_parent_term_id = ( '' !== $parent_nicename && isset( $category_hierarchy[ $parent_nicename ] ) )
+		? (int) $category_hierarchy[ $parent_nicename ]['term_id']
+		: 0;
+
+	$group_key = $taxonomy . '|' . ( $original_term_id > 0
+		? 'id:' . $original_term_id
+		: 'nicename:' . $nicename . '|text:' . md5( $raw_text ) );
+
+	$is_multilingual = qtxpm_is_multilingual_text( $raw_text );
+	$names_by_language = $is_multilingual ? qtxpm_split_multilingual_text( $raw_text ) : array();
+
+	if ( ! $is_multilingual || empty( $names_by_language ) ) {
+		$names_by_language = array( '_default' => $raw_text );
+	}
+
+	$group_term_ids = qtxpm_get_runtime_term_group( $group_key );
+	$run_id = qtxpm_get_current_migration_run()['run'];
+	$new_language_added = false;
+
+	foreach ( $names_by_language as $language => $name ) {
+		$language = ( '_default' === $language ) ? $resolved_post_language : qtxpm_normalize_language_code( (string) $language );
+		$name = trim( (string) $name );
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$resolved_language = '' !== $language ? qtxpm_resolve_polylang_language_code( $language ) : '';
+		$language_key = '' !== $resolved_language ? $resolved_language : '_mono';
+
+		if ( isset( $group_term_ids[ $language_key ] ) ) {
+			continue;
+		}
+
+		$term_id = qtxpm_find_or_create_migrated_term( $taxonomy, $name, $nicename, $resolved_language );
+		if ( $term_id <= 0 ) {
+			continue;
+		}
+
+		if ( $original_term_id > 0 && function_exists( 'update_term_meta' ) ) {
+			update_term_meta( $term_id, '_pll_migration_original_id', $original_term_id );
+			update_term_meta( $term_id, '_pll_migration_parent_id', $original_parent_term_id );
+			if ( '' !== $resolved_language ) {
+				update_term_meta( $term_id, '_pll_migration_lang', $resolved_language );
+			}
+			if ( '' !== $run_id ) {
+				update_term_meta( $term_id, '_pll_migration_run', $run_id );
+			}
+		}
+
+		$group_term_ids[ $language_key ] = $term_id;
+		qtxpm_remember_runtime_term_group( $group_key, $language_key, $term_id );
+		$new_language_added = true;
+	}
+
+	$post_language_key = '' !== $resolved_post_language ? $resolved_post_language : '_mono';
+
+	// The category text was multilingual but had no block for the post's own
+	// language: create a term for that missing language rather than silently
+	// attaching the post to a term from a different language.
+	if ( $is_multilingual && '_mono' !== $post_language_key && ! isset( $group_term_ids[ $post_language_key ] ) ) {
+		$fallback_source_language = (string) array_key_first( $names_by_language );
+		$fallback_name = trim( (string) reset( $names_by_language ) );
+
+		if ( '' !== $fallback_name ) {
+			$fallback_term_id = qtxpm_find_or_create_migrated_term( $taxonomy, $fallback_name, $nicename, $resolved_post_language );
+
+			if ( $fallback_term_id > 0 ) {
+				if ( $original_term_id > 0 && function_exists( 'update_term_meta' ) ) {
+					update_term_meta( $fallback_term_id, '_pll_migration_original_id', $original_term_id );
+					update_term_meta( $fallback_term_id, '_pll_migration_parent_id', $original_parent_term_id );
+					update_term_meta( $fallback_term_id, '_pll_migration_lang', $resolved_post_language );
+					if ( '' !== $run_id ) {
+						update_term_meta( $fallback_term_id, '_pll_migration_run', $run_id );
+					}
+				}
+
+				$group_term_ids[ $post_language_key ] = $fallback_term_id;
+				qtxpm_remember_runtime_term_group( $group_key, $post_language_key, $fallback_term_id );
+				$new_language_added = true;
+
+				$warnings[] = sprintf(
+					/* translators: 1: taxonomy term name reused, 2: post's language code, 3: source language code the name was copied from, 4: post title, 5: post ID. */
+					__( 'A categoria "%1$s" nao possui traducao para o idioma "%2$s"; o nome do idioma "%3$s" foi reaproveitado para criar essa variante (post "%4$s", ID %5$d).', 'qtx-polylang-migrator' ),
+					$fallback_name,
+					$resolved_post_language,
+					$fallback_source_language,
+					$post_title,
+					$post_id
+				);
+			}
+		}
+	}
+
+	// Only (re-)link translations when this call actually contributed a new
+	// language variant to the group; otherwise a later post referencing the
+	// same already-fully-resolved category would re-save the same
+	// translation group on every occurrence.
+	$linkable_term_ids = array_diff_key( $group_term_ids, array( '_mono' => 0 ) );
+	if ( $new_language_added && count( $linkable_term_ids ) > 1 && function_exists( 'pll_save_term_translations' ) ) {
+		pll_save_term_translations( $linkable_term_ids );
+	}
+
+	$term_id_for_post = $group_term_ids[ $post_language_key ] ?? ( reset( $group_term_ids ) ?: 0 );
+
+	if ( $term_id_for_post > 0 && function_exists( 'wp_set_object_terms' ) ) {
+		wp_set_object_terms( $post_id, array( $term_id_for_post ), $taxonomy, true );
+	}
+
+	return $warnings;
 }

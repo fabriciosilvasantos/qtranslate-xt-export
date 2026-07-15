@@ -15,6 +15,23 @@ if ( ! function_exists( 'qtxpm_is_multilingual_text' ) ) {
 	}
 }
 
+if ( ! function_exists( 'qtxpm_is_serialized_meta_value' ) ) {
+	/**
+	 * Detect whether a postmeta value looks like PHP-serialized data.
+	 *
+	 * Splitting a serialized value on qTranslate language markers would
+	 * corrupt its structure, so serialized meta must never be split by the
+	 * transformer nor blocked by the raw-content guard; it is imported as-is
+	 * (with an import-time warning when it still contains language markers).
+	 *
+	 * @param string $value Raw meta value text.
+	 * @return bool
+	 */
+	function qtxpm_is_serialized_meta_value( string $value ): bool {
+		return preg_match( '/^(?:a|O|s):\d+:/', ltrim( $value ) ) === 1;
+	}
+}
+
 if ( ! function_exists( 'qtxpm_split_multilingual_text' ) ) {
 	/**
 	 * Split legacy qTranslate blocks using optional destination languages.
@@ -144,6 +161,75 @@ function qtxpm_get_migration_page_slug(): string {
  */
 function qtxpm_get_migration_transient_key( string $suffix ): string {
 	return defined( 'QTXPM_MIGRATION_TRANSIENT_PREFIX' ) ? (string) QTXPM_MIGRATION_TRANSIENT_PREFIX . $suffix : 'qtxpm_' . $suffix;
+}
+
+/**
+ * Return the option name used to store the staged (processed) WXR XML.
+ *
+ * The staged XML can be several megabytes for large exports. It is stored
+ * via `update_option( ..., false )` instead of `set_transient()` so it is
+ * explicitly never autoloaded on every request, regardless of the current
+ * WordPress version's internal transient-autoload heuristics.
+ *
+ * @return string
+ */
+function qtxpm_get_staged_xml_option_name(): string {
+	return qtxpm_get_migration_transient_key( 'staged_xml_data' );
+}
+
+/**
+ * Persist the staged (processed) WXR XML without autoloading it.
+ *
+ * @param string $content Processed WXR XML content.
+ * @param int    $expiration Time-to-live in seconds.
+ * @return void
+ */
+function qtxpm_set_staged_xml( string $content, int $expiration = 3600 ): void {
+	update_option(
+		qtxpm_get_staged_xml_option_name(),
+		array(
+			'value'      => $content,
+			'expires_at' => time() + $expiration,
+		),
+		false
+	);
+}
+
+/**
+ * Retrieve the staged (processed) WXR XML, honoring its expiration.
+ *
+ * Falls back to the legacy `set_transient()`-based storage used by earlier
+ * versions of the migrator, so an in-flight migration started before this
+ * change is not silently lost.
+ *
+ * @return string|false
+ */
+function qtxpm_get_staged_xml(): string|false {
+	$stored = get_option( qtxpm_get_staged_xml_option_name(), false );
+
+	if ( is_array( $stored ) && array_key_exists( 'value', $stored ) && isset( $stored['expires_at'] ) ) {
+		if ( (int) $stored['expires_at'] < time() ) {
+			delete_option( qtxpm_get_staged_xml_option_name() );
+
+			return false;
+		}
+
+		return (string) $stored['value'];
+	}
+
+	$legacy_value = get_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
+
+	return false !== $legacy_value ? (string) $legacy_value : false;
+}
+
+/**
+ * Delete the staged (processed) WXR XML, including the legacy transient.
+ *
+ * @return void
+ */
+function qtxpm_delete_staged_xml(): void {
+	delete_option( qtxpm_get_staged_xml_option_name() );
+	delete_transient( qtxpm_get_migration_transient_key( 'staged_xml' ) );
 }
 
 /**
@@ -362,4 +448,105 @@ function qtxpm_get_polylang_language_catalog(): array {
 	}
 
 	return $catalog;
+}
+
+/**
+ * Build a nicename-indexed map of channel-level `<wp:category>` hierarchy
+ * data (term_id / parent nicename / display name) from a loaded WXR
+ * document.
+ *
+ * Unlike the per-item `<category>` elements (which only carry a nicename and
+ * do not expose parent relationships), the channel-level `<wp:category>`
+ * elements carry the original term ID and parent nicename, which is what
+ * makes reconstructing category hierarchy after migration possible.
+ *
+ * @param SimpleXMLElement $xml Loaded WXR document.
+ * @return array<string, array{term_id: int, parent_nicename: string, name: string}>
+ */
+function qtxpm_build_wxr_category_hierarchy_map( SimpleXMLElement $xml ): array {
+	$map = array();
+
+	if ( ! isset( $xml->channel ) ) {
+		return $map;
+	}
+
+	$namespaces = $xml->getNamespaces( true );
+	if ( empty( $namespaces['wp'] ) ) {
+		return $map;
+	}
+
+	$wp_channel = $xml->channel->children( $namespaces['wp'] );
+	if ( ! isset( $wp_channel->category ) ) {
+		return $map;
+	}
+
+	foreach ( $wp_channel->category as $wp_category ) {
+		$nicename = trim( (string) $wp_category->category_nicename );
+		if ( '' === $nicename ) {
+			continue;
+		}
+
+		$map[ $nicename ] = array(
+			'term_id'         => (int) $wp_category->term_id,
+			'parent_nicename' => trim( (string) $wp_category->category_parent ),
+			'name'            => (string) $wp_category->cat_name,
+		);
+	}
+
+	return $map;
+}
+
+/**
+ * Build a term mapping keyed by original term ID and language, mirroring
+ * `qtxpm_build_original_post_language_map()` for taxonomy terms.
+ *
+ * @param array $terms List of migrated terms with `_pll_migration_original_id`/`_pll_migration_lang` metadata.
+ * @return array<int, array<string, int>>
+ */
+function qtxpm_build_original_term_language_map( array $terms ): array {
+	$map = array();
+
+	foreach ( $terms as $term ) {
+		$original_id = isset( $term->original_id ) ? (int) $term->original_id : 0;
+		$term_id = isset( $term->term_id ) ? (int) $term->term_id : 0;
+		$lang = isset( $term->lang ) && is_string( $term->lang ) ? $term->lang : '';
+
+		if ( $original_id <= 0 || $term_id <= 0 ) {
+			continue;
+		}
+
+		if ( ! isset( $map[ $original_id ] ) ) {
+			$map[ $original_id ] = array();
+		}
+
+		if ( '' !== $lang ) {
+			$map[ $original_id ][ $lang ] = $term_id;
+		}
+
+		$map[ $original_id ]['*'] = $term_id;
+	}
+
+	return $map;
+}
+
+/**
+ * Build an SQL INNER JOIN fragment scoping terms (aliased per `$alias`) to
+ * the current migration run, mirroring `qtxpm_get_migration_run_scope_join()`
+ * for posts.
+ *
+ * @param string $alias Table alias used for `wp_terms` in the calling query.
+ * @return string
+ */
+function qtxpm_get_migration_run_scope_join_for_terms( string $alias = 't' ): string {
+	global $wpdb;
+
+	$run_id = qtxpm_get_current_migration_run()['run'];
+	if ( '' === $run_id || ! isset( $wpdb ) ) {
+		return '';
+	}
+
+	return $wpdb->prepare(
+		" INNER JOIN {$wpdb->termmeta} tm_run ON {$alias}.term_id = tm_run.term_id AND tm_run.meta_key = '_pll_migration_run' AND tm_run.meta_value = %s",
+		$run_id
+	);
 }
