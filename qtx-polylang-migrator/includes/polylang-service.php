@@ -522,9 +522,10 @@ function qtxpm_find_or_create_migrated_term( string $taxonomy, string $name, str
  * @param string                $post_language Resolved language of the migrated post (qTranslate code, e.g. `pt`/`pb`).
  * @param array<string, array{term_id: int, parent_nicename: string, name: string}> $category_hierarchy Channel-level `<wp:category>` hierarchy map keyed by nicename.
  * @param string                $post_title Migrated post title, used only to make warning messages traceable.
+ * @param array<int, bool>      $default_category_replaced Per-import tracker (keyed by post ID, passed by reference) recording whether the site's default category has already been replaced by a real `category`-taxonomy term for this post; see call site in `qtxpm_direct_xml_import()`.
  * @return string[] Warning messages produced while importing this category (empty when nothing noteworthy happened).
  */
-function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $category, string $post_language, array $category_hierarchy = array(), string $post_title = '' ): array {
+function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $category, string $post_language, array $category_hierarchy = array(), string $post_title = '', array &$default_category_replaced = array() ): array {
 	$warnings = array();
 
 	if ( $post_id <= 0 ) {
@@ -652,7 +653,22 @@ function qtxpm_import_wxr_post_category( int $post_id, SimpleXMLElement $categor
 	$term_id_for_post = $group_term_ids[ $post_language_key ] ?? ( reset( $group_term_ids ) ?: 0 );
 
 	if ( $term_id_for_post > 0 && function_exists( 'wp_set_object_terms' ) ) {
-		wp_set_object_terms( $post_id, array( $term_id_for_post ), $taxonomy, true );
+		// `wp_insert_post()` auto-assigns the site's default category
+		// (typically "Uncategorized") to every new `post`-type post that is
+		// created without an explicit `post_category` argument, which is how
+		// every post is imported here (see `qtxpm_direct_xml_import()`). The
+		// first time a real `category`-taxonomy term is imported for a given
+		// post, replace that default assignment (`$append = false`) instead
+		// of appending to it, mirroring the behavior of WordPress' own
+		// importer. Subsequent categories for the same post (or any
+		// `post_tag` term, which has no default) are appended as usual.
+		$append = true;
+		if ( 'category' === $taxonomy && empty( $default_category_replaced[ $post_id ] ) ) {
+			$append = false;
+			$default_category_replaced[ $post_id ] = true;
+		}
+
+		wp_set_object_terms( $post_id, array( $term_id_for_post ), $taxonomy, $append );
 	}
 
 	return $warnings;
