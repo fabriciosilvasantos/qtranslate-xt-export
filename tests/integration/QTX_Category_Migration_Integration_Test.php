@@ -139,6 +139,101 @@ XML;
 		$this->assertSame( array( $en_term['term_id'] ), $post_en_terms );
 	}
 
+	/**
+	 * Regression test for the real-world WXR ordering produced by
+	 * `qtxpm_process_wxr_content()`: content `<category>` elements are
+	 * cloned from the original item and therefore appear *before* the
+	 * `<category domain="language">` element, which is always appended
+	 * last on each per-language clone. The two fixture tests above put the
+	 * `language` category first and would not have caught a regression
+	 * where the post's language was assigned only after the content
+	 * category loop ran.
+	 */
+	public function test_content_category_before_language_category_still_resolves_post_language(): void {
+		$xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>Post PT</title>
+		<guid isPermaLink="false">post-pt</guid>
+		<content:encoded><![CDATA[Conteudo]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="category" nicename="noticias"><![CDATA[[:pt]Noticias[:en]News[:]]]></category>
+		<category domain="language" nicename="pt">pt</category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[post-pt]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[post]]></wp:post_type>
+	</item>
+	<item>
+		<title>Post EN</title>
+		<guid isPermaLink="false">post-en</guid>
+		<content:encoded><![CDATA[Content]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="category" nicename="noticias"><![CDATA[[:pt]Noticias[:en]News[:]]]></category>
+		<category domain="language" nicename="en">en</category>
+		<wp:post_id>2</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[post-en]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[post]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$result = self::importXml( $xml );
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( 2, $result['imported'] );
+
+		$terms = $GLOBALS['qtx_wp_terms'];
+		$this->assertCount( 2, $terms, 'Exactly one term per language should be created, no more.' );
+
+		$pt_term = null;
+		$en_term = null;
+		foreach ( $terms as $term ) {
+			if ( 'Noticias' === $term['name'] ) {
+				$pt_term = $term;
+			} elseif ( 'News' === $term['name'] ) {
+				$en_term = $term;
+			}
+		}
+
+		$this->assertNotNull( $pt_term, 'PT term variant must be created.' );
+		$this->assertNotNull( $en_term, 'EN term variant must be created.' );
+
+		// The en post (stub-assigned ID 2, in document order) must receive
+		// the `en` term, not the `pt` term, even though the content category
+		// element appears before the language category element in the WXR.
+		$post_pt_terms = $GLOBALS['qtx_wp_object_terms'][1]['category'] ?? array();
+		$post_en_terms = $GLOBALS['qtx_wp_object_terms'][2]['category'] ?? array();
+
+		$this->assertSame( array( $pt_term['term_id'] ), $post_pt_terms );
+		$this->assertSame(
+			array( $en_term['term_id'] ),
+			$post_en_terms,
+			'The en post must be assigned the en term; receiving the pt term indicates the post language was not resolved before the content category was imported.'
+		);
+
+		$this->assertSame( 'pt', $GLOBALS['qtx_polylang_post_languages'][1] ?? null );
+		$this->assertSame( 'en', $GLOBALS['qtx_polylang_post_languages'][2] ?? null );
+	}
+
 	public function test_category_missing_post_language_variant_creates_term_and_emits_warning(): void {
 		$xml = <<<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -566,5 +661,114 @@ XML;
 		} finally {
 			$wpdb = $original_wpdb;
 		}
+	}
+
+	/**
+	 * Regression test: real WordPress core (`wp_insert_post()` ->
+	 * `wp_set_post_categories()`) auto-assigns the site's default category
+	 * (commonly "Uncategorized") to every new `post`-type post created
+	 * without an explicit `post_category` argument, which is how every post
+	 * is imported here. Once a real `<category domain="category">` is
+	 * imported for that post, the default assignment must be replaced, not
+	 * merely appended to.
+	 */
+	public function test_default_wp_category_is_replaced_by_real_imported_category(): void {
+		$GLOBALS['qtx_wp_terms'][999] = array(
+			'term_id'  => 999,
+			'name'     => 'Uncategorized',
+			'slug'     => 'uncategorized',
+			'taxonomy' => 'category',
+			'parent'   => 0,
+		);
+		$GLOBALS['qtx_wp_options']['default_category'] = 999;
+
+		$xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>Scholarship call</title>
+		<guid isPermaLink="false">scholarship-call</guid>
+		<content:encoded><![CDATA[Content]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="category" nicename="scholarships">Scholarships</category>
+		<category domain="language" nicename="en">en</category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[scholarship-call]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[post]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$result = self::importXml( $xml );
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( 1, $result['imported'] );
+
+		$post_terms = $GLOBALS['qtx_wp_object_terms'][1]['category'] ?? array();
+		$this->assertNotContains( 999, $post_terms, 'The default "Uncategorized" term must be replaced once a real category is imported.' );
+		$this->assertCount( 1, $post_terms, 'Only the real imported category should remain on the post.' );
+	}
+
+	/**
+	 * Companion to the test above: when a post has no real
+	 * `<category domain="category">` element at all, the default category
+	 * assigned by `wp_insert_post()` must be left untouched -- the fix must
+	 * not blindly strip the default category from every imported post.
+	 */
+	public function test_default_wp_category_is_kept_when_post_has_no_real_category(): void {
+		$GLOBALS['qtx_wp_terms'][999] = array(
+			'term_id'  => 999,
+			'name'     => 'Uncategorized',
+			'slug'     => 'uncategorized',
+			'taxonomy' => 'category',
+			'parent'   => 0,
+		);
+		$GLOBALS['qtx_wp_options']['default_category'] = 999;
+
+		$xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+	xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+	xmlns:content="http://purl.org/rss/1.0/modules/content/"
+	xmlns:wp="http://wordpress.org/export/1.2/">
+<channel>
+	<item>
+		<title>No category post</title>
+		<guid isPermaLink="false">no-category-post</guid>
+		<content:encoded><![CDATA[Content]]></content:encoded>
+		<excerpt:encoded><![CDATA[]]></excerpt:encoded>
+		<category domain="language" nicename="en">en</category>
+		<wp:post_id>1</wp:post_id>
+		<wp:post_date><![CDATA[2026-03-10 10:00:00]]></wp:post_date>
+		<wp:post_date_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_date_gmt>
+		<wp:post_modified><![CDATA[2026-03-10 10:00:00]]></wp:post_modified>
+		<wp:post_modified_gmt><![CDATA[2026-03-10 13:00:00]]></wp:post_modified_gmt>
+		<wp:post_name><![CDATA[no-category-post]]></wp:post_name>
+		<wp:status><![CDATA[publish]]></wp:status>
+		<wp:post_parent>0</wp:post_parent>
+		<wp:menu_order>0</wp:menu_order>
+		<wp:post_type><![CDATA[post]]></wp:post_type>
+	</item>
+</channel>
+</rss>
+XML;
+
+		$result = self::importXml( $xml );
+		$this->assertTrue( $result['success'] );
+		$this->assertSame( 1, $result['imported'] );
+
+		$post_terms = $GLOBALS['qtx_wp_object_terms'][1]['category'] ?? array();
+		$this->assertSame( array( 999 ), $post_terms, 'The default category must be left untouched when the post has no real category.' );
 	}
 }

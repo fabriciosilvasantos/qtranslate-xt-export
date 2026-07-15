@@ -67,6 +67,14 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 		$skipped_count = 0;
 		$error_count = 0;
 		$imported_post_map = array();
+		// Tracks, per migrated post ID, whether a real `category`-taxonomy
+		// term has already been assigned during this import. WordPress
+		// auto-assigns the site's default category (usually "Uncategorized")
+		// to every new `post`-type post that doesn't specify `post_category`
+		// on `wp_insert_post()`; the first time a real category is imported
+		// for a post we must replace (not append to) that default instead of
+		// leaving both attached. See `qtxpm_import_wxr_post_category()`.
+		$default_category_replaced = array();
 		$existing_post_index = qtxpm_build_existing_post_index(
 			$wpdb->get_results(
 				"SELECT ID, post_title, guid, post_type
@@ -82,9 +90,14 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 
 		foreach ( $xml->channel->item as $index => $item ) {
 			try {
-				$wp_data = $item->children( $namespaces['wp'] );
-				$wp_content = $item->children( $namespaces['content'] );
-				$wp_excerpt = $item->children( $namespaces['excerpt'] );
+				// A well-formed WXR export may legitimately omit the
+				// `xmlns:*` declaration for a prefix it never actually uses
+				// (e.g. `xmlns:excerpt` when no item has an excerpt); guard
+				// against the resulting missing array key instead of
+				// letting it surface as a warning/notice.
+				$wp_data = $item->children( $namespaces['wp'] ?? '' );
+				$wp_content = $item->children( $namespaces['content'] ?? '' );
+				$wp_excerpt = $item->children( $namespaces['excerpt'] ?? '' );
 
 				if ( ! isset( $item->title ) || ! isset( $wp_data->post_type ) ) {
 					$result['errors'][] = sprintf(
@@ -164,7 +177,7 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 					}
 
 					$meta_count = 0;
-					foreach ( $item->children( $namespaces['wp'] )->postmeta as $meta ) {
+					foreach ( $item->children( $namespaces['wp'] ?? '' )->postmeta as $meta ) {
 						$meta_key = (string) $meta->meta_key;
 						$meta_value = (string) $meta->meta_value;
 
@@ -216,15 +229,40 @@ function qtxpm_direct_xml_import( string $xml_file, bool $force_import = false, 
 						}
 					}
 
+					// Assign the post's Polylang language *before* importing any
+					// content taxonomy category. Polylang hooks term assignment
+					// (`wp_set_object_terms()`) and resolves which language a
+					// term belongs to based on the post's *already assigned*
+					// language; a post with no language set yet is treated as
+					// the site's default language, so any category processed
+					// beforehand would silently attach the default-language
+					// term even to a secondary-language post. This must not
+					// depend on where the `<category domain="language">`
+					// element appears among the item's `<category>` elements:
+					// `qtxpm_process_wxr_content()` always appends it last on
+					// the per-language clones it produces, i.e. *after* any
+					// content categories cloned from the original item, so
+					// relying on loop order here would get it wrong on every
+					// multilingual import. `$item_language` was already
+					// resolved from the full item above (independent of
+					// iteration order), so assign it upfront.
+					if ( '' !== $item_language ) {
+						qtxpm_assign_post_language( (int) $post_id, $item_language );
+					}
+
 					foreach ( $item->category as $category ) {
 						$domain = strtolower( trim( (string) $category['domain'] ) );
 
 						if ( 'language' === $domain ) {
+							// Redundant with the upfront assignment above when
+							// `$item_language` matched this category, but kept
+							// as a defensive fallback (e.g. multiple/mismatched
+							// `language` categories on the same item).
 							qtxpm_assign_post_language( (int) $post_id, (string) $category['nicename'] );
 							continue;
 						}
 
-						$category_warnings = qtxpm_import_wxr_post_category( (int) $post_id, $category, $item_language, $category_hierarchy, $post_data['post_title'] );
+						$category_warnings = qtxpm_import_wxr_post_category( (int) $post_id, $category, $item_language, $category_hierarchy, $post_data['post_title'], $default_category_replaced );
 						if ( ! empty( $category_warnings ) ) {
 							array_push( $result['warnings'], ...$category_warnings );
 						}
