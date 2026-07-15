@@ -18,3 +18,7 @@ qtx-polylang-migrator/tmp/
 .claude/settings.local.json
 .claude/worktrees/
 .agent/
+
+# Arquivos originais de importacao (dados reais - nunca commitar)
+importacoes/*
+!importacoes/README.md
